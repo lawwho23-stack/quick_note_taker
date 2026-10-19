@@ -31,7 +31,8 @@ def read_env() -> dict[str, str]:
 def split_owner_url(url: str) -> tuple[str, str, str, str]:
     """Return (user, password, host, database) from a postgres URL, tolerating @ in the password."""
     scheme, _, rest = url.partition("://")
-    assert scheme.startswith("postgres"), "expected a postgres URL"
+    if not scheme.startswith("postgres"):
+        raise SystemExit("expected a postgres URL")
     userinfo, _, hostpart = rest.rpartition("@")
     user, _, password = userinfo.partition(":")
     host_and_port, _, database = hostpart.partition("/")
@@ -58,7 +59,8 @@ def main() -> None:
     text = ENV.read_text()
     text = re.sub(r"(?m)^DATABASE_URL=.*$", f"DATABASE_URL={session_url}", text)
     if re.search(r"(?m)^RUNTIME_DATABASE_URL=", text):
-        text = re.sub(r"(?m)^RUNTIME_DATABASE_URL=.*$", f"RUNTIME_DATABASE_URL={transaction_url}", text)
+        replacement = f"RUNTIME_DATABASE_URL={transaction_url}"
+        text = re.sub(r"(?m)^RUNTIME_DATABASE_URL=.*$", replacement, text)
     else:
         text = text.replace(
             "PINNED_RUNTIME_PASSWORD=",
