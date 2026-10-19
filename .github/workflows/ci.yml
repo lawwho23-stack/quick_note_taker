@@ -1,0 +1,130 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Web (lint, typecheck, build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install workspaces
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+        env:
+          # Build-time value only: the rewrite target for a real deployment is
+          # configured in the Vercel project, not in CI.
+          QUICK_NOTE_API_URL: https://api.invalid.example
+
+  api:
+    name: API (ruff, mypy, pytest, migrations)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        # Plain Postgres stands in for Supabase's database in CI: the migration
+        # files are plain SQL, and auth.users is stubbed below.
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      SUPABASE_URL: https://ci.invalid
+      SUPABASE_ANON_KEY: ci-anon-key
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+      RUNTIME_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Install Python dependencies
+        run: uv sync --frozen
+
+      - name: Ruff (lint)
+        run: uv run ruff check .
+
+      - name: Ruff (format check)
+        run: uv run ruff format --check .
+
+      - name: Mypy
+        run: uv run mypy app tests
+
+      - name: Unit tests
+        run: uv run pytest
+
+      - name: Apply migrations to Postgres
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+            -c "create schema if not exists auth;" \
+            -c "create table if not exists auth.users (id uuid primary key);"
+          for migration in supabase/migrations/*.sql; do
+            echo "applying ${migration}"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
+
+      - name: Smoke-check the migrated schema
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          insert into auth.users (id) values ('11111111-1111-4111-8111-111111111111');
+          insert into app.users (auth_user_id, email)
+            values ('11111111-1111-4111-8111-111111111111', 'ci@example.com');
+
+          -- the runtime role must exist and be able to read the table
+          do $$
+          begin
+            if not exists (select 1 from pg_roles where rolname = 'qn_runtime') then
+              raise exception 'qn_runtime role is missing';
+            end if;
+          end
+          $$;
+
+          set role qn_runtime;
+          select count(*) from app.users;
+          reset role;
+
+          -- deleting the auth user must cascade to the application row
+          delete from auth.users where id = '11111111-1111-4111-8111-111111111111';
+          do $$
+          begin
+            if (select count(*) from app.users) <> 0 then
+              raise exception 'expected the app.users row to cascade away';
+            end if;
+          end
+          $$;
+          SQL
