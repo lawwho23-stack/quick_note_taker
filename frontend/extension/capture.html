@@ -4,80 +4,125 @@
   <meta charset="utf-8" />
   <title>Quick Note — capture (M0)</title>
   <style>
+    /* M0 capture window, styled to the "Frosted light" design.
+       Spec: docs/design/frosted-light/popup-spec.md
+
+       Note: a Chrome popup window is opaque — backdrop-filter can only
+       blur what is inside this window. The body therefore paints a soft
+       light gradient that stands in for the mockup's desktop scenery. */
     :root {
       color-scheme: light;
-      --bg: #f3f5f9;
-      --card: #ffffff;
-      --ink: #1b2430;
-      --muted: #6b7684;
-      --accent: #2563eb;
-      --border: #e3e7ee;
+      --ink: #14161c;
+      --heading: #3f4452;
+      --muted: #4a4f5c;
+      --kbd-ink: #3a3f4c;
+      --accent: #1f5fe0;
+      --hairline: rgba(20, 22, 28, 0.1);
+      --chip-bg: rgba(20, 22, 28, 0.07);
+      --card-bg: rgba(255, 255, 255, 0.74);
+      --card-edge: rgba(255, 255, 255, 0.8);
+      --card-shadow: 0 24px 60px rgba(20, 30, 60, 0.28), 0 2px 6px rgba(20, 30, 60, 0.12);
     }
     * { box-sizing: border-box; }
-    html, body {
-      margin: 0;
-      height: 100%;
-      font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: var(--bg);
+    html, body { margin: 0; height: 100%; }
+    body {
+      padding: 10px;
+      display: flex;
       color: var(--ink);
+      font: 14px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+      background: radial-gradient(130% 120% at 20% 0%, #eef1f6 0%, rgba(238, 241, 246, 0) 55%),
+                  linear-gradient(180deg, #e4e8ef 0%, #d6dbe4 100%);
     }
-    body { display: flex; flex-direction: column; }
     .card {
       flex: 1;
-      margin: 10px;
-      padding: 14px 16px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
+      min-width: 0;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      padding: 16px 20px 14px;
+      border-radius: 18px;
+      background: var(--card-bg);
+      backdrop-filter: blur(28px) saturate(180%);
+      border: 1px solid var(--card-edge);
+      box-shadow: var(--card-shadow);
     }
     header {
       display: flex;
       align-items: center;
-      justify-content: space-between;
       gap: 8px;
+      margin-bottom: 8px;
     }
-    .title { font-weight: 600; }
-    .badge {
-      font-size: 11px;
-      color: var(--accent);
-      border: 1px solid #cddafc;
-      background: #eef3fe;
-      border-radius: 999px;
-      padding: 2px 8px;
-      white-space: nowrap;
-    }
+    header .logo { flex: none; color: var(--accent); }
+    header .title { font-size: 13px; font-weight: 600; color: var(--heading); }
     textarea {
       flex: 1;
-      resize: none;
+      min-height: 0;
       width: 100%;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 12px;
-      font: inherit;
+      padding: 0;
+      border: 0;
+      outline: 0;
+      resize: none;
+      background: transparent;
+      font-family: inherit;
+      font-size: 20px;
+      line-height: 1.4;
       color: var(--ink);
-      outline: none;
     }
-    textarea:focus { border-color: #b9c9f6; box-shadow: 0 0 0 3px #e3ebfd; }
+    textarea::placeholder { color: rgba(20, 22, 28, 0.35); }
     footer {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 8px;
-      color: var(--muted);
-      font-size: 12px;
-      min-height: 18px;
+      gap: 12px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--hairline);
     }
-    kbd {
-      font: 11px/1.2 inherit;
-      border: 1px solid var(--border);
-      border-bottom-width: 2px;
-      border-radius: 5px;
-      padding: 2px 5px;
-      background: #fafbfd;
+    .hints {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 12px;
       color: var(--muted);
+      white-space: nowrap;
+    }
+    .hints span { display: inline-flex; align-items: center; gap: 6px; }
+    kbd {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 6px;
+      border-radius: 6px;
+      background: var(--chip-bg);
+      border: 1px solid var(--hairline);
+      font-family: inherit;
+      font-size: 12px;
+      line-height: 1;
+      color: var(--kbd-ink);
+    }
+    .save {
+      flex: none;
+      height: 32px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: 9px;
+      background: var(--accent);
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .save:disabled { opacity: 0.45; cursor: default; }
+    .diag {
+      margin-top: 6px;
+      min-height: 14px;
+      font-size: 11px;
+      color: rgba(74, 79, 92, 0.75);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .note { color: var(--accent); }
   </style>
@@ -85,14 +130,22 @@
 <body>
   <div class="card">
     <header>
+      <svg class="logo" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3z"></path>
+        <path d="M14 7l3 3"></path>
+      </svg>
       <span class="title">Quick Note</span>
-      <span class="badge" id="badge">M0 bridge test</span>
     </header>
-    <textarea id="editor" placeholder="Type here to test the capture window. (M0 prototype — nothing is saved yet.)" autofocus></textarea>
+    <textarea id="editor" aria-label="Your note" placeholder="Type your note…" autofocus></textarea>
     <footer>
-      <span id="status">Opened via: <b id="trigger">?</b></span>
-      <span><kbd>Esc</kbd> close</span>
+      <div class="hints">
+        <span><kbd>↵</kbd>Save</span>
+        <span><kbd>⇧ ↵</kbd>New line</span>
+        <span><kbd>esc</kbd>Close</span>
+      </div>
+      <button type="button" class="save" disabled title="Saving arrives in M4 — this is still the M0 bridge test">Save</button>
     </footer>
+    <div id="status" class="diag">Opened via: <b id="trigger">?</b></div>
   </div>
   <script src="capture.js"></script>
 </body>
