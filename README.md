@@ -54,7 +54,8 @@ cd backend && supabase start
 supabase status          # prints local API URL and keys
 
 # 3. Configure the API
-cp backend/.env.example backend/.env   # fill SUPABASE_ANON_KEY from `supabase status`
+cp backend/.env.example backend/.env
+# then set SUPABASE_ANON_KEY from `supabase status`
 
 # 4. Run the API (port 8000)
 cd backend && uv run uvicorn app.main:app --reload --port 8000
@@ -67,6 +68,10 @@ npm run dev
 Then open http://localhost:3000. Local Supabase has email confirmation off, so register →
 sign in works immediately.
 
+`backend/.env` holds local values only. Staging values never enter git: they are supplied to
+the Vercel projects directly, and a local scratch copy lives in the git-ignored
+`backend/.env.staging` so deploys can pipe them without retyping secrets.
+
 ### Common commands
 
 | Command | Purpose |
@@ -75,6 +80,7 @@ sign in works immediately.
 | `cd backend && uv run ruff check .` | API lint |
 | `cd backend && uv run mypy app tests` | API types |
 | `cd backend && uv run pytest` | API unit tests |
+| `backend/scripts/check_migrations.sh` | Apply the migrations to a throwaway Postgres and check the schema guarantees (same steps as the CI api job) |
 | `cd backend && supabase db reset` | Re-apply migrations and seed locally |
 
 ## Database and roles
@@ -82,7 +88,9 @@ sign in works immediately.
 Application tables live in a private `app` schema, outside the Supabase Data API. Migration
 `0001_init.sql` creates:
 
-- `qn_owner` — owns application objects.
+- `qn_owner` — owns application objects. It is `nologin`, and it owns the `app` schema
+  itself: referential actions on `app` tables run with the owner's privileges, so an owner
+  without schema access would break the `auth.users` → `app.users` cascade.
 - `qn_runtime` — the API's runtime role. It never owns objects, cannot bypass row-level
   security, and holds only explicit grants. Its password is never stored in a migration:
   set it once per database with `backend/scripts/set_runtime_password.sh`.
