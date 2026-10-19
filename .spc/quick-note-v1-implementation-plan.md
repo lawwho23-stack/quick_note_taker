@@ -120,7 +120,7 @@ Implement and test the shortcut bridge before investing in the complete UI.
 
 There is a real ambiguity between an intentional `Space + N` chord and overlapping normal typing. Do not silently change the shortcut to another combination or add a hold delay. If testing cannot meet an acceptable typing experience with the exact chord, report the evidence and obtain a decision on a hold threshold or alternative before treating the shortcut requirement as complete.
 
-Successful delivery of synthetic keyboard events to an extension global command is a hypothesis to verify on the deployed target setup, not an already-proven capability.
+Successful delivery of synthetic keyboard events to an extension global command is a hypothesis to verify on the deployed target setup, not an already-proven capability. (Verified locally in M0 with an intermittent delivery gap — see `docs/m0-shortcut-feasibility-report.md`; the deployed re-check remains an M4 gate.)
 
 ## 4. Website and capture behavior
 
@@ -145,9 +145,9 @@ Edits use an atomic server-side version check. On conflict, offer keep mine, kee
 
 ### Extension capture
 
-- Open one small browser popup window near the top-center; focus it if already open.
-- Restore single-window behavior after extension service-worker restarts.
-- Reproduce the frosted card appearance inside the browser window. Native window decorations remain.
+- Show the capture card as an in-page overlay on top of the current page (real backdrop blur; decided in the M0 close-out); focus the existing capture if it is already open.
+- Where the page cannot host the overlay (Chrome-internal pages, PDF viewer), fall back to one small browser popup window near the top-center; restore single-capture behavior after extension service-worker restarts.
+- Reproduce the frosted card appearance in both the overlay and the fallback window (native window decorations remain in the fallback).
 - Focus the textarea immediately.
 - Enter saves; Shift+Enter inserts a line; Escape closes and preserves the draft.
 - Do not trigger save while an input method is composing text.
@@ -253,12 +253,14 @@ Authenticated note operations continue during Redis outages and record a degrada
 
 ### M0 — Shortcut feasibility
 
-- [ ] Build the minimum macOS event-handling helper and extension command receiver.
-- [ ] Verify `Space + N` → internal browser command → capture window.
-- [ ] Test normal typing, permission failures, shortcut conflicts, and application focus.
-- [ ] Record observed limitations and resolve any typing-gesture conflict before marking the shortcut accepted.
+- [x] Build the minimum macOS event-handling helper and extension command receiver.
+- [x] Verify `Space + N` → internal browser command → capture window.
+- [x] Test normal typing, permission failures, shortcut conflicts, and application focus.
+- [x] Record observed limitations and resolve any typing-gesture conflict before marking the shortcut accepted.
 
 Deliverable: a verified keyboard bridge, or a clear blocker requiring a gesture decision. Do not present a prototype as a completed capture product.
+
+Result (2026-10-19): the bridge is verified with one open reliability item — intermittent synthetic-shortcut delivery drops (5 of 14 detected chords produced no Chrome-side trace) — to be fixed and re-measured at M4. Gesture decision: **Plain chord (any overlap)**. Evidence and limitations: `docs/m0-shortcut-feasibility-report.md`.
 
 ### M1 — Foundation and deployed authentication proof
 
@@ -288,7 +290,8 @@ Deliverable: a user can manage their own notes end to end through the deployed w
 
 ### M4 — Complete extension and helper setup
 
-- [ ] Implement the frosted capture window, persistent drafts, duplicate-window prevention, and retry handling.
+- [ ] Implement the floating capture card (in-page overlay with popup-window fallback), persistent drafts, duplicate-capture prevention, and retry handling.
+- [ ] Gate before beta: resolve the intermittent synthetic-delivery drops found in M0 (`docs/m0-shortcut-feasibility-report.md` §3.2) and re-verify delivery on the deployed setup.
 - [ ] Add token handoff, connection/revocation handling, and stable development IDs.
 - [ ] Finish helper controls, permission guidance, and the real shortcut test.
 
@@ -339,7 +342,7 @@ For each milestone, report what changed, why, the input → processing → outpu
 - V1 has no AI, folders, rich text, sharing, offline synchronization, end-to-end encryption, or mobile application.
 - The macOS application is a shortcut helper, not a full native notes client. Windows global `Space + N` is later work.
 - Local drafts preserve text; they do not automatically submit offline notes.
-- The extension popup cannot guarantee native transparency, operation over every fullscreen application, or restoration of focus to the previous app.
+- The capture card cannot render on Chrome-internal pages (the fallback window applies) or over every fullscreen application, and it does not restore focus to the previous app.
 - The website and API may serve Windows browsers, but V1 acceptance for the exact global shortcut is macOS only.
 - Public email registration requires configured SMTP and verified sender settings. Google login requires provider credentials and exact callback URLs.
 - Review actual hosting-plan suitability and costs before enabling a public production launch; no paid resources are approved merely by this plan.
