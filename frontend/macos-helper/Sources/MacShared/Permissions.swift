@@ -12,7 +12,14 @@ public enum Permissions {
     public static var canListenEvents: Bool { CGPreflightListenEventAccess() }
 
     /// Triggers the system prompt once per app identity (if not yet decided).
-    public static func requestPostEvents() { _ = CGRequestPostEventAccess() }
+    public static func requestPostEvents() {
+        _ = CGRequestPostEventAccess()
+        // Belt and suspenders: the classic Accessibility prompt also makes sure
+        // the app is registered in the System Settings list.
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+        _ = AXIsProcessTrustedWithOptions(options)
+    }
+
     public static func requestListenEvents() { _ = CGRequestListenEventAccess() }
 
     public static func openAccessibilitySettings() {
