@@ -1,19 +1,17 @@
-# Handoff — M1 (Quick Note)
+# Handoff — M1 closed out, M2 next (Quick Note)
 
 Date: 2026-10-19
-Repo: `lawwho23-stack/quick_note_taker`, branch `main`, last commit `5cc6ceb`
-(working tree also has the M1 verification report and plan update, committed below).
+Repo: `lawwho23-stack/quick_note_taker`, branch `main`
+Environment: hosted Supabase only. Local Docker stack still skipped (see below).
 
 ## Goal
 
-M1: repo layout, CI, private schema, and a deployed staging proof of the authentication model —
-email/password, Google callback, refresh, logout, CSRF, and cookie forwarding through the Vercel
-rewrite. Deliverable: authenticated staging requests reach FastAPI with the correct account
-identity and no cross-user session leakage.
+M1 was: repository layout, CI, private schema, and a deployed staging proof of the authentication
+model — email/password, Google callback, refresh, logout, CSRF, cookie forwarding through the Vercel
+rewrite. Deliverable: authenticated staging requests reach FastAPI with the correct account identity
+and no cross-user session leakage.
 
 ## Where M1 stands
-
-Deployed and wired. Hosted Supabase only — the local Docker stack was skipped by decision.
 
 | Piece | URL / location |
 |---|---|
@@ -22,89 +20,118 @@ Deployed and wired. Hosted Supabase only — the local Docker stack was skipped 
 | Supabase project | `jfnxmsjqyzhqvusjghhe` (PostgreSQL 17) |
 | Vercel team | `lawwho23-stacks-projects` |
 
-Proven on staging: `/health` and `/ready` (database ok), the rewrite forwarding to the API, CSRF
-rejection of a hostile origin / missing token / mismatched token, six `Set-Cookie` headers surviving
-the rewrite with host-only + Secure + SameSite=Lax attributes, the `auth.users` → `app.users`
-cascade on the hosted database, and 401 for unauthenticated `/me`. CI is green on both jobs.
+Proven on staging, this session:
 
-Still open: the email/password session round trip, blocked on one dashboard toggle, and the Google
-callback, deferred by decision. Details in `docs/m1-auth-verification-report.md`.
+- **Email/password round trip** — login → `/v1/auth/session` → `/v1/me` → CSRF rejections →
+  refresh rotation → logout → `/me` 401.
+- **Confirmation link round trip** — Supabase `/auth/v1/verify` → 302 to
+  `/auth/confirm#access_token=…` → `POST /v1/auth/exchange` → 200 → working session. Confirm email
+  is still **on**, and an unconfirmed account signing in gets 403 `email_not_confirmed` with no
+  `Set-Cookie` header at all.
+- **Two-user isolation** — separate identities, distinct account ids, A's refresh token still
+  resolves to A, A's logout leaves B signed in (`scripts/auth_isolation.sh`).
+- **Resend** — `POST /v1/auth/resend` → 202 for unknown addresses, 403 for a hostile origin, 400
+  for a malformed address.
+
+Not proven, both blocked on credentials we do not have:
+
+1. **Real mailbox delivery.** No SMTP configured. The built-in mailer is capped at 2 emails/hour
+   (`rate_limit_email_sent: 2`) and is currently exhausted, so `POST /v1/auth/register` answers
+   429 `rate_limited` instead of the 200 `confirmation_required` the code and tests produce.
+2. **Google consent round trip.** `external_google_enabled: false`; no Google Cloud OAuth client.
+
+M1's checkbox in the plan stays unticked for those two reasons. Everything else is verified.
+
+## Two real defects found and fixed
+
+- **Confirmation emails pointed at localhost.** `sign_up()` sent no `redirect_to`, and the project's
+  `uri_allow_list` was empty, so Supabase rewrote the link to the Site URL
+  (`http://localhost:3000`). Registration now sends the website's `/auth/confirm` route and
+  `backend/scripts/configure_auth.sh` sets `site_url` + `uri_allow_list` repeatably. This would have
+  broken every staging signup the moment SMTP was added.
+- **There was no way to resend a confirmation email.** Added the endpoint and a button on the
+  sign-up screen.
 
 ## Decisions worth remembering
 
-- **One repository, two Vercel projects.** Both deploy from the repo root with `rootDirectory` set
-  to `backend` and `frontend/web`. Deploying from inside a subdirectory fails: the configured root
-  directory must exist inside the uploaded file set.
-- **Framework presets are required.** The API needs `fastapi` plus
-  `[tool.vercel] entrypoint = "app.main:app"`; the website needs `nextjs`. Without them Vercel
-  looked for functions under `api/` and built the website as a static site.
+- **Auth URLs are code, not dashboard clicks.** `backend/scripts/configure_auth.sh --project-ref
+  <ref> --web-url <url>` sets only `site_url` and `uri_allow_list`. It deliberately never touches
+  Confirm email, SMTP, or OAuth providers. `supabase config push` is **not** safe here: the local
+  `config.toml` has `enable_confirmations = false` for local dev and pushing it would switch
+  confirmation off on staging.
+- **Resend is an enumeration-safe endpoint.** It always answers 202, and only re-raises 5xx. Do not
+  “improve” it by returning 404 for unknown addresses.
+- **Deploy the API from the repository root.** `cd backend && vercel --prod` fails with
+  *“The specified Root Directory backend does not exist”*. Use
+  `npx vercel --prod --project quick-note-api` from the repo root. Vercel is not wired to GitHub
+  here; a push does **not** redeploy.
+- **One repository, two Vercel projects**, both with `rootDirectory` set (`backend`,
+  `frontend/web`). Framework presets: `fastapi` with `[tool.vercel] entrypoint = "app.main:app"`,
+  and `nextjs`.
 - **The real website alias is `quick-note-web-one.vercel.app`.** `quick-note-web.vercel.app`
-  belongs to an unrelated project and 404s on every route. Do not use it in config.
-- **`qn_owner` owns the `app` schema itself.** Referential actions run with the table owner's
-  privileges, so an owner without `USAGE` on the schema breaks the `auth.users` cascade. This was a
-  real bug caught before it reached production.
-- **No role password in a migration.** `qn_runtime` gets its password out of band via
-  `backend/scripts/set_runtime_password.sh`.
-- **Two connection strings.** Migrations use the session pooler (5432, owner); the running API uses
-  the transaction pooler (6543, `qn_runtime`, prepared statements off, `NullPool`).
-- **The staging owner password contains `@`.** `backend/scripts/build_staging_urls.py` percent-encodes
-  it and derives both URLs into `backend/.env.staging` (git-ignored). Never hand-edit those URLs.
-- **Hosted Supabase rejects `@example.com`** (`email_address_invalid`). The smoke script takes
-  `EMAIL_DOMAIN`.
-- **The CSRF dependency is origin-only when no CSRF cookie exists** — that is the first request of a
-  session, by design, and covered by tests.
-- **`.vercelignore` is load-bearing.** The Swift helper's `.build` directory is ~198 MB.
+  belongs to an unrelated project.
+- **`qn_owner` owns the `app` schema itself**, because referential actions run with the table
+  owner's privileges. Without that, deleting an `auth.users` row fails on the cascade.
+- **Two connection strings.** Migrations use the session pooler (5432, owner); the API uses the
+  transaction pooler (6543, `qn_runtime`, no prepared statements, `NullPool`).
+- **Hosted Supabase rejects `@example.com`.** The smoke script takes `EMAIL_DOMAIN`.
+- **Confirmation links are single-use credentials.** Pass them via `CONFIRM_URL`/stdin, never as a
+  command-line argument.
 
-## Files touched
+## Files touched this session
 
-- `backend/app/` — FastAPI service: config, errors, request-id middleware, cookies, security
-  (CSRF/PKCE/redirect sanitising), `supabase_auth.py` (GoTrue REST client), `accounts.py`,
-  `single_flight.py`, routers (`auth`, `me`), `/health`, `/ready`.
-- `backend/tests/` — 58 tests with fake provider and session fixtures.
-- `backend/supabase/migrations/0001_init.sql` — schema, roles, cascade, trigger, grants.
-- `backend/supabase/config.toml`, `seed.sql` — local Supabase configuration.
-- `backend/scripts/check_migrations.sh` — applies migrations to a throwaway Postgres and checks the
-  schema guarantees (mirrors the CI migration job).
-- `backend/scripts/set_runtime_password.sh`, `build_staging_urls.py`.
-- `backend/pyproject.toml` — dependencies, `[tool.vercel]`, ruff/mypy/pytest config.
-- `frontend/web/` — Next 16 app: sign-in, sign-up, notes, `auth/confirm`, `auth/callback`, and
-  `src/lib/api.ts` (CSRF-aware fetch with single-flight refresh via `navigator.locks`).
-- `frontend/web/next.config.ts` — `/api/v1/:path*` → `${QUICK_NOTE_API_URL}/v1/:path*`.
-- `.github/workflows/ci.yml` — web job and API job (migrations applied to `postgres:17`).
-- `scripts/auth_smoke.sh` — repeatable end-to-end auth proof.
-- `README.md`, `.spc/quick-note-v1-implementation-plan.md`, `docs/m1-auth-verification-report.md`.
+- `backend/app/supabase_auth.py` — `sign_up(..., redirect_to)` and `resend_confirmation()`.
+- `backend/app/routers/auth.py` — `_confirmation_redirect()`, `POST /v1/auth/resend`.
+- `backend/app/schemas.py` — `ResendRequest`.
+- `backend/tests/` — fake provider records redirects/resends; 64 tests (was 58).
+- `frontend/web/src/app/sign-up/page.tsx` — resend action with sending/sent/failed states.
+- `scripts/auth_smoke.sh` — `MODE=register|login|confirm`, plus `SKIP_REGISTER=1` when the link
+  already identifies the account.
+- `scripts/auth_isolation.sh` — new two-user isolation proof.
+- `backend/scripts/configure_auth.sh` — new; repeatable Supabase auth URL configuration.
+- `docs/m1-auth-verification-report.md`, `.spc/quick-note-v1-implementation-plan.md`.
 
-## Next steps
+## Next: M2 — backend notes
 
-1. **Unblock the email/password proof.** Supabase Dashboard → Authentication → Sign In / Providers →
-   Email → turn **Confirm email** off. Then:
-   ```bash
-   EMAIL_DOMAIN=<domain you control> \
-   BASE_URL=https://quick-note-web-one.vercel.app \
-   ORIGIN=https://quick-note-web-one.vercel.app \
-   scripts/auth_smoke.sh
-   ```
-   One clean run proves register → session → `/me` identity → CSRF → refresh rotation → logout, and
-   closes the M1 deliverable.
-2. **Google callback** (deferred): Google Cloud OAuth client, redirect URI
-   `https://jfnxmsjqyzhqvusjghhe.supabase.co/auth/v1/callback`, add
-   `https://quick-note-web-one.vercel.app/api/v1/auth/callback` and `.../auth/confirm` to the
-   Supabase redirect allow list, then set `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID`/`_SECRET`.
-3. **Two-user isolation check** — the last clause of the M1 deliverable. Needs the toggle off first:
-   create two accounts, confirm each `/me` returns only its own identity, and confirm one user's
-   cookies never resolve to the other account.
-4. **Then M2** — notes CRUD with RLS and ownership protection.
-5. **Local stack, when the connection recovers:** `cd backend && supabase start`, then
+Scope from the plan: ownership protection, RLS, create/read/update/delete, pagination, search,
+idempotency, atomic version conflicts, structured errors, rate limiting, and a generated TypeScript
+contract. Deliverable: API behaviour verified against PostgreSQL, including two-user isolation and
+retries.
+
+Three things to settle before writing code:
+
+1. **RLS identity is transaction-local, so `ensure_account()` must stop committing.**
+   `backend/app/accounts.py` currently calls `session.commit()`. In M2 `SET LOCAL app.user_id` is
+   lost at commit, so the commit has to move to the request boundary and `ensure_account()` must
+   `flush()` instead. Same for any other mid-request commit.
+2. **Rate limiting is a real Upstash dependency, not a stub.** Use a thin `httpx` client (`INCR` +
+   `EXPIRE NX` pipeline); the official client assumes long-lived connections Vercel does not have.
+   The limiter must distinguish *not configured* (allow) from *configured but unreachable*
+   (notes fail open and log; auth returns 503). Limits: extension 60/min/token, website 300/min/user,
+   auth 10/min/IP.
+3. **Search is `ILIKE` + `pg_trgm` GIN, not `tsvector`.** Postgres full-text search tokenises
+   Burmese and Thai badly. The plan already chose this; do not revisit it.
+
+Also unblocked by this session: `scripts/auth_isolation.sh` gives M2 a ready-made pattern for the
+two-user isolation test, and staging now has two confirmed accounts usable for it (see
+`backend/.env.staging`; admin-created accounts are the only live path until SMTP is configured).
+
+## Optional close-out work, when credentials exist
+
+1. **SMTP:** Brevo (verified sender, no domain work), `smtp-relay.brevo.com:587`, SMTP key — not the
+   API key. Then raise `rate_limit_email_sent` and run
+   `MODE=confirm scripts/auth_smoke.sh` with a link from a real inbox.
+2. **Google:** OAuth client with redirect URI
+   `https://jfnxmsjqyzhqvusjghhe.supabase.co/auth/v1/callback`; the allow list already contains our
+   `/api/v1/auth/callback`.
+3. **Local stack:** `cd backend && supabase start` when the network recovers, then
    `backend/scripts/check_migrations.sh` and the smoke script against `http://localhost:3000`.
 
 ## Environment notes
 
-- The connection measured ~40 KB/s against Cloudflare, GitHub and Apple CDNs with normal latency
-  (26–56 ms) and no packet loss. A ~2.5 GB Supabase image pull is not viable at that rate. Docker
-  Desktop was restarted several times while diagnosing this; it is currently running.
-- Local scratch secrets live in `backend/.env.staging` (git-ignored); staging values are also set in
-  both Vercel projects. Nothing sensitive is committed.
-- Staging env vars on `quick-note-api`: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `DATABASE_URL`,
-  `RUNTIME_DATABASE_URL`, `APP_ENV=staging`, `COOKIES_SECURE=true`, `WEB_BASE_URL`,
-  `WEB_ORIGIN_ALLOWLIST`, `LOG_LEVEL`.
-- `quick-note-web` has `QUICK_NOTE_API_URL=https://quick-note-api.vercel.app`.
+- Docker Desktop is running again, but the image pull was the blocker (~40 KB/s to Cloudflare,
+  GitHub and Apple CDNs, normal latency, no packet loss). A ~2.5 GB pull was not viable.
+- Local secrets live in `backend/.env.staging` (git-ignored). Staging `quick-note-api` env:
+  `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `DATABASE_URL`, `RUNTIME_DATABASE_URL`, `APP_ENV=staging`,
+  `COOKIES_SECURE=true`, `WEB_BASE_URL`, `WEB_ORIGIN_ALLOWLIST`, `LOG_LEVEL`.
+- CI run `39236478681` is green on both jobs.
