@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Quick Note (M0 bridge test)",
+  "version": "0.1.0",
+  "description": "M0 prototype: verifies the Space+N bridge and opens the capture window.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAj79t7Qsx18Bbw2iIRoa+LEx7SRt0Adkei6AsCH9v0xRk6CWMcKOvVYGVZnuy0Oa7Gd/nlhoYOMp27nsdHvWnW0SFPUsB9tJ9Gf5BM7NPNNwnUsjZx997MVnbeZVpaBU/sst/w+MLSOTX3NZFA++/FPvXIkHfKTHCV2rkGR1NzCAiSu/cNDr0ZfRy4iOVtlqX0ZNV+fwK359mB5AzlAsmc2xcNTkLSPJXran5mi8nBEi7fDwe/qBDym2KhsaVX1JC75RbXUyGmjEvSMBnF5PsVZpKWV0FNaPp0sMWr44IGnDI8lruyMJjuWp3eOPbA9gGaDmfnPR7zodPTzOUwIHkWwIDAQAB",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Quick Note capture (manual test)"
+  },
+  "permissions": ["storage"],
+  "host_permissions": ["http://127.0.0.1:8787/*"],
+  "commands": {
+    "open-capture": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+7",
+        "mac": "MacCtrl+Shift+7"
+      },
+      "description": "Open Quick Note capture (M0 bridge test)"
+    }
+  }
+}

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Quick Note — capture (M0)</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f3f5f9;
+      --card: #ffffff;
+      --ink: #1b2430;
+      --muted: #6b7684;
+      --accent: #2563eb;
+      --border: #e3e7ee;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    body { display: flex; flex-direction: column; }
+    .card {
+      flex: 1;
+      margin: 10px;
+      padding: 14px 16px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .title { font-weight: 600; }
+    .badge {
+      font-size: 11px;
+      color: var(--accent);
+      border: 1px solid #cddafc;
+      background: #eef3fe;
+      border-radius: 999px;
+      padding: 2px 8px;
+      white-space: nowrap;
+    }
+    textarea {
+      flex: 1;
+      resize: none;
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font: inherit;
+      color: var(--ink);
+      outline: none;
+    }
+    textarea:focus { border-color: #b9c9f6; box-shadow: 0 0 0 3px #e3ebfd; }
+    footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      min-height: 18px;
+    }
+    kbd {
+      font: 11px/1.2 inherit;
+      border: 1px solid var(--border);
+      border-bottom-width: 2px;
+      border-radius: 5px;
+      padding: 2px 5px;
+      background: #fafbfd;
+      color: var(--muted);
+    }
+    .note { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <header>
+      <span class="title">Quick Note</span>
+      <span class="badge" id="badge">M0 bridge test</span>
+    </header>
+    <textarea id="editor" placeholder="Type here to test the capture window. (M0 prototype — nothing is saved yet.)" autofocus></textarea>
+    <footer>
+      <span id="status">Opened via: <b id="trigger">?</b></span>
+      <span><kbd>Esc</kbd> close</span>
+    </footer>
+  </div>
+  <script src="capture.js"></script>
+</body>
+</html>
