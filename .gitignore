@@ -1,0 +1,28 @@
+# macOS
+.DS_Store
+
+# Node (frontend workspaces arrive in M1)
+node_modules/
+npm-debug.log*
+
+# Python (backend arrives in M1)
+__pycache__/
+*.py[cod]
+.venv/
+.venv*/
+
+# Swift build artifacts
+frontend/macos-helper/.build/
+frontend/macos-helper/dist/
+*.xcuserstate
+DerivedData/
+
+# Local secrets and dev keys (never commit)
+*.pem
+.secrets/
+.env
+.env.*
+!.env.example
+
+# M0 dev logs
+frontend/extension/dev/*.log
