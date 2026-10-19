@@ -1,0 +1,15 @@
+node_modules
+.next
+.vercel
+.venv
+__pycache__
+.mypy_cache
+.pytest_cache
+.ruff_cache
+.build
+DerivedData
+*.dSYM
+.env
+.env.*
+*.log
+.DS_Store

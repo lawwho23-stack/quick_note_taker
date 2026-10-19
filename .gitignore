@@ -32,3 +32,5 @@ frontend/extension/dev/*.log
 
 # Local design exports (values distilled into docs/design/frosted-light/)
 .spc/*.zip
+.vercel
+.env*

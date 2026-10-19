@@ -15,11 +15,14 @@ set -euo pipefail
 BASE_URL="${BASE_URL:-http://localhost:3000}"
 ORIGIN="${ORIGIN:-$BASE_URL}"
 API_PATH="${API_PATH:-/api/v1}"
+# Hosted Supabase rejects reserved domains such as example.com, so the domain is
+# configurable. Use a domain you control, or a real mailbox provider for testing.
+EMAIL_DOMAIN="${EMAIL_DOMAIN:-example.com}"
 JAR="$(mktemp -t qn-smoke-jar)"
 BODY="$(mktemp -t qn-smoke-body)"
 trap 'rm -f "$JAR" "$BODY"' EXIT
 
-EMAIL="smoke-$(date +%s)-$RANDOM@example.com"
+EMAIL="smoke-$(date +%s)-$RANDOM@$EMAIL_DOMAIN"
 PASSWORD="smoke-pass-$(date +%s)-A1"
 
 pass() { printf '  PASS  %s\n' "$1"; }

@@ -16,6 +16,10 @@ set -euo pipefail
 psql "$DATABASE_URL" \
   --set ON_ERROR_STOP=1 \
   --set runtime_password="$RUNTIME_DB_PASSWORD" \
-  -c "alter role qn_runtime with password :'runtime_password';"
+  <<'SQL'
+-- :'runtime_password' is a psql variable, which only interpolates from stdin
+-- (or a file), not from -c.
+alter role qn_runtime with password :'runtime_password';
+SQL
 
 echo "qn_runtime password updated."

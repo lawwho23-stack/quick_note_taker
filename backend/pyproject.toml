@@ -27,7 +27,7 @@ default-groups = ["dev"]
 
 # Explicit entrypoint for Vercel (also auto-detected as app/main.py).
 [tool.vercel]
-entrypoint = "app/main.py"
+entrypoint = "app.main:app"
 
 [tool.ruff]
 line-length = 100
