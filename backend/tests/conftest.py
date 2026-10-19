@@ -55,10 +55,13 @@ class FakeAuthProvider:
         self.refresh_calls = 0
         self.revoked: list[str] = []
         self.authorize_calls: list[dict[str, str]] = []
+        self.signup_redirects: list[str] = []
+        self.resend_calls: list[dict[str, str]] = []
         self.signup_requires_confirmation = False
         self.fail_sign_in: ApiError | None = None
         self.fail_refresh: ApiError | None = None
         self.fail_exchange: ApiError | None = None
+        self.fail_resend: ApiError | None = None
         self.reject_tokens = False
         self._serial = 0
 
@@ -71,11 +74,17 @@ class FakeAuthProvider:
             user=AuthUser(id=self.user_id, email=self.email),
         )
 
-    async def sign_up(self, email: str, password: str) -> SignUpResult:
+    async def sign_up(self, email: str, password: str, *, redirect_to: str) -> SignUpResult:
+        self.signup_redirects.append(redirect_to)
         user = AuthUser(id=self.user_id, email=email)
         return SignUpResult(
             user=user, session=None if self.signup_requires_confirmation else self._session()
         )
+
+    async def resend_confirmation(self, email: str, *, redirect_to: str) -> None:
+        self.resend_calls.append({"email": email, "redirect_to": redirect_to})
+        if self.fail_resend is not None:
+            raise self.fail_resend
 
     async def sign_in(self, email: str, password: str) -> AuthSession:
         self.sign_in_calls += 1

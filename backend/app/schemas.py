@@ -18,6 +18,10 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=72)
 
 
+class ResendRequest(BaseModel):
+    email: EmailStr
+
+
 class ExchangeRequest(BaseModel):
     """Session handoff for email confirmation links (fragment tokens or PKCE code)."""
 

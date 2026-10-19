@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from typing import Any
 
@@ -151,20 +152,67 @@ async def test_get_user_returns_identity(settings: Settings) -> None:
 
 
 async def test_sign_up_without_session_requires_confirmation(settings: Settings) -> None:
+    seen: list[httpx.Request] = []
+
     def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
         return httpx.Response(
             200, json={"id": USER_ID, "email": "new@example.com", "session": None}
         )
 
     provider = make_provider(settings, handler)
     try:
-        result = await provider.sign_up("new@example.com", "pw-12345678")
+        result = await provider.sign_up(
+            "new@example.com",
+            "pw-12345678",
+            redirect_to="https://web.example/auth/confirm",
+        )
     finally:
         await provider.aclose()
 
     assert result.session is None
     assert result.user is not None
     assert result.user.email == "new@example.com"
+    # The confirmation email must return the browser to our own route.
+    assert seen[0].url.params["redirect_to"] == "https://web.example/auth/confirm"
+
+
+async def test_resend_confirmation_sends_redirect_and_type(settings: Settings) -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, json={})
+
+    provider = make_provider(settings, handler)
+    try:
+        await provider.resend_confirmation(
+            "new@example.com", redirect_to="https://web.example/auth/confirm"
+        )
+    finally:
+        await provider.aclose()
+
+    assert seen[0].url.params["redirect_to"] == "https://web.example/auth/confirm"
+    assert json.loads(seen[0].content)["type"] == "signup"
+
+
+async def test_resend_confirmation_maps_rate_limit(settings: Settings) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            429, json={"error_code": "over_email_send_rate_limit", "msg": "too many"}
+        )
+
+    provider = make_provider(settings, handler)
+    try:
+        with pytest.raises(ApiError) as caught:
+            await provider.resend_confirmation(
+                "new@example.com", redirect_to="https://web.example/auth/confirm"
+            )
+    finally:
+        await provider.aclose()
+
+    assert caught.value.status_code == 429
+    assert caught.value.code == "rate_limited"
 
 
 async def test_revoke_never_raises(settings: Settings) -> None:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from http.cookies import SimpleCookie
 
+from app.errors import ApiError
 from fastapi.testclient import TestClient
 
 from tests.conftest import ALLOWED_ORIGIN, FakeAuthProvider, FakeDbSession, make_account
@@ -139,6 +140,49 @@ def test_register_with_autoconfirm_signs_in(client: TestClient, fake_db: FakeDbS
     assert response.json()["status"] == "signed_in"
     assert fake_db.upserts == 1
     assert fake_db.commits == 1
+
+
+def test_register_sends_confirmation_back_to_the_website(
+    client: TestClient, fake_provider: FakeAuthProvider
+) -> None:
+    """The emailed link must land on our route, never on the Supabase Site URL."""
+    fake_provider.signup_requires_confirmation = True
+
+    client.post("/v1/auth/register", json=LOGIN_BODY, headers=ORIGIN)
+
+    assert fake_provider.signup_redirects == ["http://localhost:3000/auth/confirm"]
+
+
+def test_resend_always_accepts_and_uses_the_website_route(
+    client: TestClient, fake_provider: FakeAuthProvider
+) -> None:
+    response = client.post("/v1/auth/resend", json={"email": "user@example.com"}, headers=ORIGIN)
+
+    assert response.status_code == 202
+    assert fake_provider.resend_calls == [
+        {"email": "user@example.com", "redirect_to": "http://localhost:3000/auth/confirm"}
+    ]
+
+
+def test_resend_does_not_reveal_whether_an_account_exists(
+    client: TestClient, fake_provider: FakeAuthProvider
+) -> None:
+    """A rejected address answers exactly like an accepted one."""
+    fake_provider.fail_resend = ApiError(400, "auth_request_rejected", "rejected")
+
+    response = client.post("/v1/auth/resend", json={"email": "nobody@example.com"}, headers=ORIGIN)
+
+    assert response.status_code == 202
+    assert response.content == b""
+
+
+def test_resend_surfaces_a_real_outage(client: TestClient, fake_provider: FakeAuthProvider) -> None:
+    fake_provider.fail_resend = ApiError(503, "auth_unavailable", "unavailable")
+
+    response = client.post("/v1/auth/resend", json={"email": "user@example.com"}, headers=ORIGIN)
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "auth_unavailable"
 
 
 def test_logout_clears_cookies_and_revokes(

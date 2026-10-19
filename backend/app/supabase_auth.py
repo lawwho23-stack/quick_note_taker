@@ -143,8 +143,18 @@ class SupabaseAuth:
 
     # -- endpoints --------------------------------------------------------
 
-    async def sign_up(self, email: str, password: str) -> SignUpResult:
-        response = await self._client.post("/signup", json={"email": email, "password": password})
+    async def sign_up(self, email: str, password: str, *, redirect_to: str) -> SignUpResult:
+        """Create an account.
+
+        `redirect_to` decides where the confirmation email sends the browser.
+        Without it Supabase falls back to the project's Site URL, which would
+        send staging users to a local address.
+        """
+        response = await self._client.post(
+            "/signup",
+            params={"redirect_to": redirect_to},
+            json={"email": email, "password": password},
+        )
         if response.status_code not in (200, 201):
             raise self._error_from_response(response)
         data: dict[str, Any] = response.json()
@@ -152,6 +162,20 @@ class SupabaseAuth:
             self._session_from_token_response(data["session"]) if data.get("session") else None
         )
         return SignUpResult(user=self._user_from(data), session=session)
+
+    async def resend_confirmation(self, email: str, *, redirect_to: str) -> None:
+        """Send another signup confirmation email.
+
+        Supabase answers the same way whether or not the address exists, which is
+        what keeps this endpoint from becoming an account-enumeration oracle.
+        """
+        response = await self._client.post(
+            "/resend",
+            params={"redirect_to": redirect_to},
+            json={"email": email, "type": "signup"},
+        )
+        if response.status_code not in (200, 201):
+            raise self._error_from_response(response)
 
     async def sign_in(self, email: str, password: str) -> AuthSession:
         response = await self._client.post(

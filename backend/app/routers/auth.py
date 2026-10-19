@@ -36,6 +36,7 @@ from app.schemas import (
     LoginRequest,
     RegisterRequest,
     RegisterResponse,
+    ResendRequest,
     SessionResponse,
     UserOut,
 )
@@ -78,6 +79,14 @@ def _error_response(status_code: int, code: str, message: str) -> JSONResponse:
     return JSONResponse(status_code=status_code, content=error_body(code, message))
 
 
+def _confirmation_redirect(settings: Settings) -> str:
+    """Where a confirmation email link returns the browser.
+
+    Points at the website route that exchanges the link for session cookies.
+    """
+    return f"{settings.web_base_url}/auth/confirm"
+
+
 @router.post("/register", response_model=RegisterResponse)
 async def register(
     payload: RegisterRequest,
@@ -87,7 +96,11 @@ async def register(
     settings: SettingsDep,
 ) -> RegisterResponse:
     """Create an account. With email confirmation on, no session is issued yet."""
-    result = await provider.sign_up(payload.email, payload.password)
+    result = await provider.sign_up(
+        payload.email,
+        payload.password,
+        redirect_to=_confirmation_redirect(settings),
+    )
     if result.session is None:
         return RegisterResponse(
             status="confirmation_required",
@@ -106,6 +119,28 @@ async def register(
         access_token_expires_at=result.session.expires_at
         or jwt_expiry(result.session.access_token),
     )
+
+
+@router.post("/resend", status_code=202)
+async def resend_confirmation(
+    payload: ResendRequest,
+    provider: ProviderDep,
+    settings: SettingsDep,
+) -> Response:
+    """Send another confirmation email.
+
+    Always answers 202 so the endpoint cannot be used to discover which addresses
+    have accounts.
+    """
+    try:
+        await provider.resend_confirmation(
+            payload.email, redirect_to=_confirmation_redirect(settings)
+        )
+    except ApiError as exc:
+        if exc.status_code >= 500:
+            raise
+        logger.info("resend confirmation suppressed", extra={"error_code": exc.code})
+    return Response(status_code=202)
 
 
 @router.post("/login", response_model=AuthResponse)

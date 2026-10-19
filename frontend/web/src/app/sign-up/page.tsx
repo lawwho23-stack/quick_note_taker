@@ -14,6 +14,18 @@ export default function SignUpPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmationSent, setConfirmationSent] = useState(false);
+  const [resendState, setResendState] = useState<"idle" | "sending" | "sent" | "failed">("idle");
+
+  async function onResend() {
+    setResendState("sending");
+    const result = await apiJson("/api/v1/auth/resend", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+    // The API answers 202 whether or not the address exists, so only a
+    // transport failure counts as a failure here.
+    setResendState(result.ok ? "sent" : "failed");
+  }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -61,10 +73,32 @@ export default function SignUpPage() {
         {error ? <p className="notice error">{error}</p> : null}
 
         {confirmationSent ? (
-          <p className="notice success">
-            Confirmation email sent to {email}. Open the link in that email to finish creating
-            your account, then sign in here.
-          </p>
+          <div className="stack">
+            <p className="notice success">
+              Confirmation email sent to {email}. Open the link in that email to finish creating
+              your account, then sign in here.
+            </p>
+            {resendState === "sent" ? (
+              <p className="notice info">Another email is on its way. It can take a minute.</p>
+            ) : null}
+            {resendState === "failed" ? (
+              <p className="notice error">
+                Could not resend right now. Wait a moment and try again.
+              </p>
+            ) : null}
+            <button
+              className="button secondary"
+              type="button"
+              onClick={() => void onResend()}
+              disabled={resendState === "sending"}
+            >
+              {resendState === "sending" ? "Sending…" : "Resend confirmation email"}
+            </button>
+            <p className="muted small">
+              Confirmation links expire. If the first email never arrives, check the spam folder
+              before resending.
+            </p>
+          </div>
         ) : (
           <form className="form" onSubmit={onSubmit}>
             <div className="field">
