@@ -264,13 +264,15 @@ Result (2026-10-19): the bridge is verified with one open reliability item — i
 
 ### M1 — Foundation and deployed authentication proof
 
-- [ ] Establish the repository layout while preserving the remote README and supplied local assets.
-- [ ] Add workspace configuration, backend dependencies, local Supabase, environment examples, and CI.
-- [ ] Create the initial private schema and migrations.
-- [ ] Deploy a thin staging website and FastAPI service.
+- [x] Establish the repository layout while preserving the remote README and supplied local assets.
+- [x] Add workspace configuration, backend dependencies, local Supabase, environment examples, and CI.
+- [x] Create the initial private schema and migrations.
+- [x] Deploy a thin staging website and FastAPI service.
 - [ ] Prove email/password login, Google callback, refresh, logout, CSRF protection, and cookie forwarding through Vercel.
 
 Deliverable: authenticated staging requests reach FastAPI with correct account identity and no cross-user session leakage.
+
+Result (2026-10-19): staging is deployed and wired — website `https://quick-note-web-one.vercel.app`, API `https://quick-note-api.vercel.app`, migration applied to hosted Supabase, `/ready` reports the database as ok. Proven on staging: CSRF protection (hostile origin, missing and mismatched token all rejected), six `Set-Cookie` headers surviving the Vercel rewrite with correct host-only/Secure/SameSite attributes, the `auth.users` cascade on the hosted database, and unauthenticated access rejected. CI is green on both jobs. Still open: the email/password session round trip is blocked on turning off Supabase's **Confirm email** toggle (hosted Supabase also rejects `@example.com`, so the smoke script now takes `EMAIL_DOMAIN`), and the Google callback is deferred by decision. Evidence and exact unblock steps: `docs/m1-auth-verification-report.md`.
 
 ### M2 — Backend notes
 
