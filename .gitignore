@@ -24,6 +24,9 @@ DerivedData/
 .env.*
 !.env.example
 
+# Vercel project links
+.vercel/
+
 # M0 dev logs
 frontend/extension/dev/*.log
 
