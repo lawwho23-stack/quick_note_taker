@@ -1,0 +1,1 @@
+"""Quick Note API package."""
