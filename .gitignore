@@ -26,3 +26,6 @@ DerivedData/
 
 # M0 dev logs
 frontend/extension/dev/*.log
+
+# Local design exports (values distilled into docs/design/frosted-light/)
+.spc/*.zip

@@ -35,6 +35,7 @@ References supplied by the user:
 
 - `quick-note-v1-architecture.md`
 - `A · Frosted light@1x.png`
+- `docs/design/frosted-light/` — extracted popup mockup plus `popup-spec.md` (exact tokens and component values; the original zip stays local)
 
 This plan resolves the original document's open stack and hosting choices. Its macOS helper requirement supersedes the original web-only capture boundary. Windows support for the exact `Space + N` shortcut is deferred.
 
