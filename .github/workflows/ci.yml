@@ -38,6 +38,47 @@ jobs:
           # configured in the Vercel project, not in CI.
           QUICK_NOTE_API_URL: https://api.invalid.example
 
+  extension:
+    name: Extension (lint, typecheck, test, build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install workspaces
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint --workspace @quick-note/extension
+
+      - name: Typecheck
+        run: npm run typecheck --workspace @quick-note/extension
+
+      - name: Unit tests
+        run: npm run test --workspace @quick-note/extension
+
+      - name: Build
+        run: npm run build --workspace @quick-note/extension
+
+  macos-helper:
+    name: macOS helper (build, chord tests)
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: frontend/macos-helper
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build
+        run: swift build
+
+      - name: Chord state machine tests
+        run: swift run ChordCoreTestRunner
+
   api:
     name: API (ruff, mypy, pytest, migrations)
     runs-on: ubuntu-latest

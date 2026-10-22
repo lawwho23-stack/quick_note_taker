@@ -130,8 +130,8 @@ defaults delete com.laww.quicknote.helper                            # back to d
 ```
 
 One JSON object per line, timing and state only — **never note text, never full
-keystrokes**. Every line has `type`, `ts` (epoch seconds, to match the beacon
-log) and `mono_ms` (monotonic ms, for precise intervals).
+keystrokes**. Every line has `type`, `ts` (epoch seconds, to match the extension's
+console log) and `mono_ms` (monotonic ms, for precise intervals).
 
 Chord types: `space_down_buffered`, `space_replayed_down`, `n_pass_*` (normal
 typing, with `held_ms`), `chord` / `chord_armed` (fired / armed for key-up,
@@ -162,8 +162,9 @@ variant you want to compare, starting with **(a)**.
    **Accessibility** and **Input Monitoring** → Quick Note Helper (if it is
    already listed, toggle it off and on, or remove it with `−` and add
    `dist/QuickNoteHelper.app` again). Quit and reopen the helper afterwards.
-2. Start the beacon: `python3 frontend/extension/dev/beacon.py` and keep Chrome
-   open with the unpacked extension loaded.
+2. Keep Chrome open with the unpacked extension loaded
+   (`frontend/extension/dist`). Open `chrome://extensions` → Quick Note →
+   "service worker" to see its console.
 3. Helper menu: check both permissions show `granted ✓`, the status says
    `running`, and pick the variant (keep “Retry” **off** for a clean measure).
 4. Note the time. Focus a Chrome window, then 10 times: hold `Space`, tap `N`,
@@ -173,8 +174,9 @@ variant you want to compare, starting with **(a)**.
 6. Also type a normal sentence with spaces and words containing `n` to check
    typing is unaffected (no lost/doubled spaces, no stuck Control/Shift).
 7. Evidence: each `post_end` in the helper log should have a matching
-   `command` line in `frontend/extension/dev/beacon.log` within ~250 ms.
-   A `post_end` with no beacon line = delivery drop.
+   `[quick-note] open-capture #N via shortcut at <time>` line in the extension's
+   service-worker console within ~250 ms. A `post_end` with no console line =
+   delivery drop.
 
 If (a) is not 10/10, repeat steps 3–7 with (b), (c), (d), and then with
 “Retry” on.
