@@ -4,7 +4,8 @@
   "private": true,
   "workspaces": [
     "frontend/web",
-    "frontend/shared"
+    "frontend/shared",
+    "frontend/extension"
   ],
   "scripts": {
     "dev": "npm run dev --workspace @quick-note/web",

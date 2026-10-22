@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 from typing import Any
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 import httpx
 
@@ -71,6 +71,12 @@ _MESSAGE_FALLBACKS: tuple[tuple[str, tuple[int, str, str]], ...] = (
 def _unavailable() -> ApiError:
     return ApiError(
         503, "auth_unavailable", "The authentication service is unavailable. Try again."
+    )
+
+
+def account_deletion_unavailable() -> ApiError:
+    return ApiError(
+        503, "account_deletion_unavailable", "Account deletion is not available right now."
     )
 
 
@@ -254,6 +260,28 @@ class SupabaseAuth:
             await self._client.post("/logout", headers={"authorization": f"Bearer {access_token}"})
         except httpx.HTTPError:
             logger.warning("supabase logout request failed")
+
+    async def delete_user(self, auth_user_id: str) -> None:
+        """Delete a Supabase Auth user through the admin API (needs the service role key).
+
+        The database cascades the deletion to the account, its notes and its tokens.
+        A user that is already gone counts as deleted.
+        """
+        service_key = self._settings.supabase_service_role_key
+        if not service_key:
+            raise account_deletion_unavailable()
+        response = await self._send(
+            "DELETE",
+            f"/admin/users/{quote(auth_user_id, safe='')}",
+            headers={"apikey": service_key, "authorization": f"Bearer {service_key}"},
+        )
+        if response.status_code in (200, 204, 404):
+            return
+        logger.warning("admin user delete failed", extra={"status_code": response.status_code})
+        if response.status_code >= 500 or response.status_code == 429:
+            raise _unavailable()
+        # A rejected service key is our configuration problem, not the user's.
+        raise account_deletion_unavailable()
 
     def authorize_url(
         self, *, provider: str, redirect_to: str, code_challenge: str, state: str

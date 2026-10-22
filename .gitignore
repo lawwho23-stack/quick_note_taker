@@ -34,3 +34,6 @@ frontend/extension/dev/*.log
 .spc/*.zip
 .vercel
 .env*
+
+# Claude Code agent worktrees
+.claude/worktrees/

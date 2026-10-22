@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { Logo } from "@/components/logo";
 import { QuinnHead } from "@/components/quinn";
 
@@ -10,7 +12,9 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
         <QuinnHead size={56} />
         {children}
       </section>
-      <p className="auth-footer">Your notes are private to your account.</p>
+      <p className="auth-footer">
+        Your notes are private to your account. <Link href="/privacy">Privacy</Link>
+      </p>
     </main>
   );
 }

@@ -29,6 +29,7 @@ from app.db import get_session
 from app.deps import get_auth_provider
 from app.errors import ApiError, error_body
 from app.models import User
+from app.rate_limit import limit_auth_by_ip
 from app.schemas import (
     AuthResponse,
     ExchangeRequest,
@@ -51,7 +52,12 @@ from app.supabase_auth import SupabaseAuth
 
 logger = logging.getLogger("quick_note.auth")
 
-router = APIRouter(prefix="/v1/auth", tags=["auth"], dependencies=[Depends(require_cookie_csrf)])
+# 10 requests per minute per IP on every auth route; fails closed if Redis is down.
+router = APIRouter(
+    prefix="/v1/auth",
+    tags=["auth"],
+    dependencies=[Depends(limit_auth_by_ip), Depends(require_cookie_csrf)],
+)
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 SessionDep = Annotated[AsyncSession, Depends(get_session)]

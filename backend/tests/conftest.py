@@ -63,6 +63,9 @@ class FakeAuthProvider:
         self.fail_exchange: ApiError | None = None
         self.fail_resend: ApiError | None = None
         self.reject_tokens = False
+        self.get_user_tokens: list[str] = []
+        self.deleted_users: list[str] = []
+        self.fail_delete: ApiError | None = None
         self._serial = 0
 
     def _session(self) -> AuthSession:
@@ -99,12 +102,18 @@ class FakeAuthProvider:
         return self._session()
 
     async def get_user(self, access_token: str) -> AuthUser:
+        self.get_user_tokens.append(access_token)
         if self.reject_tokens:
             raise ApiError(401, "session_expired", "Session expired. Sign in again.")
         return AuthUser(id=self.user_id, email=self.email)
 
     async def revoke(self, access_token: str) -> None:
         self.revoked.append(access_token)
+
+    async def delete_user(self, auth_user_id: str) -> None:
+        if self.fail_delete is not None:
+            raise self.fail_delete
+        self.deleted_users.append(auth_user_id)
 
     def authorize_url(
         self, *, provider: str, redirect_to: str, code_challenge: str, state: str
@@ -197,6 +206,7 @@ def _reset_single_flight() -> Iterator[None]:
 @pytest.fixture
 def settings() -> Settings:
     return Settings(
+        _env_file=None,  # a developer's backend/.env (e.g. live Upstash keys) must not leak in
         app_env="local",
         supabase_url="http://localhost:54321",
         supabase_anon_key="test-anon-key",

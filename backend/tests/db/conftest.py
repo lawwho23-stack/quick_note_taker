@@ -11,14 +11,20 @@ from __future__ import annotations
 
 import os
 import uuid
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Callable, Iterator
 from typing import Any
 
 import pytest
-from app.db import build_engine
+from app.config import Settings
+from app.db import build_engine, get_session
+from app.deps import get_auth_provider
+from app.main import create_app
 from app.notes import NoteStore
+from fastapi.testclient import TestClient
 from sqlalchemy import event, text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+
+from tests.conftest import FakeAuthProvider
 
 DB_URL = os.environ.get("QN_DB_TEST_URL", "")
 
@@ -106,3 +112,40 @@ async def make_store(runtime_engine: AsyncEngine) -> AsyncIterator[Callable[[], 
     yield _make
     for session in sessions:
         await session.close()
+
+
+# HTTP: the real app, signed in as account A, on the qn_runtime engine.
+
+
+async def _auth_user_id(engine: AsyncEngine, account_id: uuid.UUID) -> str:
+    async with engine.connect() as connection:
+        value = (
+            await connection.execute(
+                text("select auth_user_id from app.users where id = :id"), {"id": account_id}
+            )
+        ).scalar_one()
+    return str(value)
+
+
+@pytest.fixture
+async def signed_in_as_a(owner_engine: AsyncEngine, account_a: uuid.UUID) -> FakeAuthProvider:
+    provider = FakeAuthProvider()
+    provider.user_id = await _auth_user_id(owner_engine, account_a)
+    return provider
+
+
+@pytest.fixture
+def api(
+    settings: Settings, runtime_engine: AsyncEngine, signed_in_as_a: FakeAuthProvider
+) -> Iterator[TestClient]:
+    application = create_app(settings)
+    application.dependency_overrides[get_auth_provider] = lambda: signed_in_as_a
+    factory = async_sessionmaker(runtime_engine, expire_on_commit=False)
+
+    async def _session() -> AsyncIterator[AsyncSession]:
+        async with factory() as session:
+            yield session
+
+    application.dependency_overrides[get_session] = _session
+    with TestClient(application) as client:
+        yield client
