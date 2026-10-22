@@ -63,6 +63,10 @@ class FakeNoteStore:
         self.notes[note.id] = note
         return note, True
 
+    async def export(self, account_id: uuid.UUID) -> list[Note]:
+        rows = [n for n in self.notes.values() if n.user_id == account_id and n.deleted_at is None]
+        return sorted(rows, key=lambda n: (n.created_at, n.id))
+
     async def list(
         self, account_id: uuid.UUID, *, limit: int, cursor: str | None = None, q: str | None = None
     ) -> tuple[list[Note], str | None]:

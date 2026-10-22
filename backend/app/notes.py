@@ -138,6 +138,16 @@ class NoteStore:
             409, "note_id_conflict", "A different note already uses this id. Use a new id."
         )
 
+    async def export(self, account_id: uuid.UUID) -> list[Note]:
+        """Every live note of the account, oldest first (for the data export)."""
+        await self._scope(account_id)
+        statement = (
+            select(Note)
+            .where(Note.user_id == account_id, Note.deleted_at.is_(None))
+            .order_by(Note.created_at.asc(), Note.id.asc())
+        )
+        return list((await self._session.execute(statement)).scalars())
+
     async def list(
         self,
         account_id: uuid.UUID,
