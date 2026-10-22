@@ -11,10 +11,21 @@ export type ViewState =
 /** How long "Saved" stays on screen before the card closes. */
 export const SAVED_LINGER_MS = 600;
 
-export function fromSaveResult(r: SaveResult): ViewState {
-  if (r.status === "saved") return { kind: "saved" };
-  if (r.status === "not_connected") return { kind: "not_connected" };
-  return { kind: "error", code: r.code, retryable: r.retryable, retryAfterSec: r.retryAfterSec };
+const ERROR_CODES = new Set<string>(["empty", "too_large", "timeout", "network", "server", "rate_limited", "conflict", "rejected"]);
+
+/**
+ * Map the background's reply to a view. Anything that is not a well-formed
+ * SaveResult (e.g. `{ok:false}` from a refused message) becomes a
+ * non-retryable error, so the editor is never left locked.
+ */
+export function fromSaveResult(reply: unknown): ViewState {
+  const r = reply as Partial<SaveResult> | null | undefined;
+  if (r?.status === "saved") return { kind: "saved" };
+  if (r?.status === "not_connected") return { kind: "not_connected" };
+  if (r?.status === "error" && typeof r.code === "string" && ERROR_CODES.has(r.code)) {
+    return { kind: "error", code: r.code, retryable: r.retryable === true, retryAfterSec: r.retryAfterSec };
+  }
+  return { kind: "error", code: "rejected", retryable: false };
 }
 
 /**

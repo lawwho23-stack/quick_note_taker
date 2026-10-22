@@ -2,6 +2,7 @@
 // iframe (?mode=overlay) or in the fallback popup window (?mode=popup).
 // It never calls the API: it asks the background to save.
 import "./capture.css";
+import { NOTE_MAX_CHARS } from "../lib/defaults";
 import { shouldSubmitOnEnter } from "../lib/ime";
 import { POPUP_WIDTH, topCenter } from "../lib/geometry";
 import { type CaptureState, FRAME_MESSAGE_SOURCE, parseFrameMessage } from "../lib/messages";
@@ -67,17 +68,21 @@ async function submit() {
   if (view.kind === "saving" || view.kind === "saved") return;
   const pendingRetry = view.kind === "error" && view.retryable;
   if (!pendingRetry && editor.value.trim() === "") return;
+  if (!pendingRetry && editor.value.trim().length > NOTE_MAX_CHARS) {
+    setView({ kind: "error", code: "too_large", retryable: false });
+    return;
+  }
 
   // Do not race a draft write against the save (the save clears the draft).
   clearTimeout(draftTimer);
   draftTimer = undefined;
   setView({ kind: "saving" });
 
-  let result: SaveResult;
+  let result: unknown;
   try {
-    result = await send<SaveResult>({ type: "save", body: editor.value });
+    result = await send<unknown>({ type: "save", body: editor.value });
   } catch {
-    result = { status: "error", code: "network", retryable: true };
+    result = { status: "error", code: "network", retryable: true } satisfies SaveResult;
   }
   const next = fromSaveResult(result);
   if (next.kind === "error" && next.code === "empty") {

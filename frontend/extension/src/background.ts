@@ -8,6 +8,11 @@ import { API_BASE, SETUP_URL, WEB_BASE } from "./lib/config";
 import { buildAllowedOrigins } from "./lib/origin";
 import { chromeKV } from "./lib/storage";
 
+// chrome.storage.local is readable by content scripts by default. Lock it to
+// trusted contexts (service worker + extension pages) so the token and the
+// drafts are never readable from the overlay running inside a web page.
+chrome.storage.local.setAccessLevel({ accessLevel: "TRUSTED_CONTEXTS" }).catch(logError);
+
 const deps: HandlerDeps = {
   kv: chromeKV(chrome.storage.local),
   fetch: (input, init) => fetch(input, init),

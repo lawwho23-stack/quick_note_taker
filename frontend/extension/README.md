@@ -54,7 +54,7 @@ Then connect your account at `<website>/quick-note`.
 
 | Permission | Why |
 |---|---|
-| `storage` | Keep the connection token, your unsent drafts, and the last-opened time on this device. |
+| `storage` | Keep the connection token, your unsent drafts, and the last-opened time on this device. Local storage is locked to the extension's own pages (`TRUSTED_CONTEXTS`), so the card injected into a web page cannot read it. |
 | `activeTab` | When you press the shortcut (or click the icon), Chrome lets the extension touch **only the current tab, only at that moment**, to show the card. No page is read. |
 | `scripting` | Insert the capture card into that tab. |
 | Host: the API (`quick-note-api.vercel.app`, `localhost:8000`) | Send your note to the Quick Note server. No other site is contacted. |
@@ -104,5 +104,9 @@ These need a real browser and cannot run in the unit tests:
 - Card on a normal page, on a page with a strict Content-Security-Policy, and
   on a dark-mode site (the card should stay light and frosted).
 - Fallback popup on `chrome://extensions`, the new tab page, and a PDF.
+- Inside the card on a web page, `capture.js` and its CSS load (only
+  `capture.html` is listed as web-accessible; its own sub-resources should load
+  because the extension page requests them).
+- On macOS, a global press while another app is in front brings Chrome forward.
 - Burmese IME: Enter while composing does not save.
 - Offline → Retry → online: one note on the website, not two.

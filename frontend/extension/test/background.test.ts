@@ -26,10 +26,12 @@ let external: Listener;
 let internal: Listener;
 let local: ReturnType<typeof fakeArea>;
 let fetchMock: ReturnType<typeof vi.fn>;
+let setAccessLevel: ReturnType<typeof vi.fn>;
 
 async function loadBackground(initial: Record<string, unknown> = {}) {
   vi.resetModules();
   local = fakeArea(initial);
+  setAccessLevel = vi.fn(async () => undefined);
   const listen = () => ({ addListener: vi.fn() });
   const chromeMock = {
     runtime: {
@@ -39,7 +41,7 @@ async function loadBackground(initial: Record<string, unknown> = {}) {
       onMessageExternal: { addListener: (l: Listener) => (external = l) },
       onMessage: { addListener: (l: Listener) => (internal = l) },
     },
-    storage: { local, session: fakeArea({}) },
+    storage: { local: { ...local, setAccessLevel }, session: fakeArea({}) },
     commands: { onCommand: listen() },
     action: { onClicked: listen() },
     windows: { onRemoved: listen() },
@@ -62,6 +64,10 @@ const web = { origin: WEB, url: `${WEB}/quick-note` };
 describe("background: Contract 2 (onMessageExternal)", () => {
   beforeEach(async () => {
     await loadBackground({ [KEYS.lastOpenedAt]: 1234 });
+  });
+
+  it("locks chrome.storage.local to trusted contexts (no content-script access to the token)", () => {
+    expect(setAccessLevel).toHaveBeenCalledWith({ accessLevel: "TRUSTED_CONTEXTS" });
   });
 
   it("ping reports version, connection and lastOpenedAt", async () => {
