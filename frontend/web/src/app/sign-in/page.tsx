@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
+import { AuthShell } from "@/components/auth-shell";
+import { PasswordInput } from "@/components/password-input";
 import { ResendButton } from "@/components/resend-button";
 import { apiJson } from "@/lib/api";
 
@@ -51,10 +53,11 @@ function SignInForm() {
 
     if (!result.ok) {
       setBusy(false);
-      setError(result.error?.message ?? "Could not sign in. Please try again.");
       if (result.status === 403 && result.error?.code === "email_not_confirmed") {
         setUnconfirmedEmail(email);
+        return;
       }
+      setError(result.error?.message ?? "Could not sign in. Please try again.");
       return;
     }
 
@@ -63,20 +66,25 @@ function SignInForm() {
   }
 
   return (
-    <section className="card stack">
-      <div className="topbar">
-        <Link className="brand" href="/">
-          Quick Note
-        </Link>
-        <Link className="muted small" href="/sign-up">
-          Create account
-        </Link>
+    <>
+      <div className="auth-head">
+        <h1>Welcome back</h1>
+        <p>Sign in with your email and password.</p>
       </div>
-      <h1>Sign in</h1>
-      <p className="muted small">Use your email and password, or continue with Google.</p>
 
-      {error ? <p className="notice error">{error}</p> : null}
-      {unconfirmedEmail ? <ResendButton email={unconfirmedEmail} /> : null}
+      {error ? (
+        <p className="notice error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {unconfirmedEmail ? (
+        <div className="stack">
+          <p className="notice info" role="alert">
+            Confirm your email first. We sent a link to {unconfirmedEmail}.
+          </p>
+          <ResendButton email={unconfirmedEmail} />
+        </div>
+      ) : null}
 
       <form className="form" onSubmit={onSubmit}>
         <div className="field">
@@ -87,50 +95,31 @@ function SignInForm() {
             name="email"
             type="email"
             autoComplete="email"
+            placeholder="you@gmail.com"
             required
             value={email}
             onChange={(event) => setEmail(event.target.value)}
           />
         </div>
-        <div className="field">
-          <label htmlFor="password">Password</label>
-          <input
-            className="input"
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-        </div>
-        <button className="button" type="submit" disabled={busy}>
+        <PasswordInput value={password} onChange={setPassword} autoComplete="current-password" />
+        <button className="button large block" type="submit" disabled={busy}>
           {busy ? "Signing in…" : "Sign in"}
         </button>
       </form>
 
-      <hr className="divider" />
-
-      <a className="button secondary" href="/api/v1/auth/google?next=/notes">
-        Continue with Google
-      </a>
-    </section>
+      <p className="auth-switch">
+        New to Quick Note? <Link href="/sign-up">Create an account</Link>
+      </p>
+    </>
   );
 }
 
 export default function SignInPage() {
   return (
-    <main className="page page-narrow">
-      <Suspense
-        fallback={
-          <section className="card stack">
-            <p className="muted">Loading sign-in…</p>
-          </section>
-        }
-      >
+    <AuthShell>
+      <Suspense fallback={<p className="muted">Loading sign-in…</p>}>
         <SignInForm />
       </Suspense>
-    </main>
+    </AuthShell>
   );
 }

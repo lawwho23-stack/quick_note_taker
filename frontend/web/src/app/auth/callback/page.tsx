@@ -1,7 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect } from "react";
+
+import { AuthShell } from "@/components/auth-shell";
 
 /**
  * Alias for the sign-in callback.
@@ -18,14 +19,12 @@ export default function AuthCallbackPage() {
   }, []);
 
   return (
-    <main className="page page-narrow">
-      <section className="card stack">
-        <Link className="brand" href="/">
-          Quick Note
-        </Link>
+    <AuthShell>
+      <span className="spinner" aria-hidden="true" />
+      <div className="auth-head" role="status">
         <h1>Finishing sign-in…</h1>
-        <p className="muted">Completing the Google callback.</p>
-      </section>
-    </main>
+        <p>One moment while we sign you in.</p>
+      </div>
+    </AuthShell>
   );
 }

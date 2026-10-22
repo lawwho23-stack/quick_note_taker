@@ -5,8 +5,44 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { AuthShell } from "@/components/auth-shell";
+import { PasswordInput } from "@/components/password-input";
 import { ResendButton } from "@/components/resend-button";
 import { apiJson } from "@/lib/api";
+
+/** A one-click way into the inbox for the mail providers most people use. */
+function inboxLink(email: string): { label: string; href: string } | null {
+  const domain = email.split("@")[1]?.toLowerCase() ?? "";
+  if (domain === "gmail.com" || domain === "googlemail.com") {
+    return { label: "Open Gmail", href: "https://mail.google.com/mail/u/0/#inbox" };
+  }
+  if (["outlook.com", "hotmail.com", "live.com"].includes(domain)) {
+    return { label: "Open Outlook", href: "https://outlook.live.com/mail/0/inbox" };
+  }
+  if (domain === "yahoo.com") {
+    return { label: "Open Yahoo Mail", href: "https://mail.yahoo.com" };
+  }
+  return null;
+}
+
+function MailIcon() {
+  return (
+    <svg
+      width="26"
+      height="26"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="3" y="5" width="18" height="14" rx="3" />
+      <path d="M4 7l8 6 8-6" />
+    </svg>
+  );
+}
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -42,79 +78,86 @@ export default function SignUpPage() {
     setConfirmationSent(true);
   }
 
-  return (
-    <main className="page page-narrow">
-      <section className="card stack">
-        <div className="topbar">
-          <Link className="brand" href="/">
-            Quick Note
-          </Link>
-          <Link className="muted small" href="/sign-in">
-            Sign in
-          </Link>
+  if (confirmationSent) {
+    const inbox = inboxLink(email);
+    return (
+      <AuthShell>
+        <span className="auth-icon">
+          <MailIcon />
+        </span>
+        <div className="auth-head">
+          <h1>Check your inbox</h1>
+          <p>
+            We sent a confirmation link to <strong>{email}</strong>. Open it to finish creating
+            your account. You will be signed in right away.
+          </p>
         </div>
-        <h1>Create your account</h1>
-        <p className="muted small">
-          Notes are private to your account. Passwords are handled by Supabase Auth and never
-          stored by this application.
+        {inbox ? (
+          <a className="button large block" href={inbox.href} target="_blank" rel="noopener noreferrer">
+            {inbox.label}
+          </a>
+        ) : null}
+        <ResendButton email={email} initialCooldown={60} />
+        <p className="hint">
+          Can&apos;t find it? Check the Spam or Promotions folder before resending.
         </p>
+        <p className="auth-switch">
+          Wrong email?{" "}
+          <button
+            className="link-button"
+            type="button"
+            onClick={() => setConfirmationSent(false)}
+          >
+            Use a different one
+          </button>
+        </p>
+      </AuthShell>
+    );
+  }
 
-        {error ? <p className="notice error">{error}</p> : null}
+  return (
+    <AuthShell>
+      <div className="auth-head">
+        <h1>Create your account</h1>
+        <p>Free, and takes less than a minute.</p>
+      </div>
 
-        {confirmationSent ? (
-          <div className="stack">
-            <p className="notice success">
-              Confirmation email sent to {email}. Open the link in that email to finish creating
-              your account, then sign in here.
-            </p>
-            <ResendButton email={email} initialCooldown={60} />
-            <p className="muted small">
-              Confirmation links expire. If the first email never arrives, check the spam folder
-              before resending.
-            </p>
-          </div>
-        ) : (
-          <form className="form" onSubmit={onSubmit}>
-            <div className="field">
-              <label htmlFor="email">Email</label>
-              <input
-                className="input"
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="password">Password</label>
-              <input
-                className="input"
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                minLength={8}
-                required
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-              <span className="muted small">At least 8 characters.</span>
-            </div>
-            <button className="button" type="submit" disabled={busy}>
-              {busy ? "Creating account…" : "Create account"}
-            </button>
-          </form>
-        )}
+      {error ? (
+        <p className="notice error" role="alert">
+          {error}
+        </p>
+      ) : null}
 
-        <hr className="divider" />
+      <form className="form" onSubmit={onSubmit}>
+        <div className="field">
+          <label htmlFor="email">Email</label>
+          <input
+            className="input"
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@gmail.com"
+            required
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+        </div>
+        <PasswordInput
+          value={password}
+          onChange={setPassword}
+          autoComplete="new-password"
+          minLength={8}
+          hint="At least 8 characters."
+        />
+        <button className="button large block" type="submit" disabled={busy}>
+          {busy ? "Creating account…" : "Create account"}
+        </button>
+      </form>
 
-        <a className="button secondary" href="/api/v1/auth/google?next=/notes">
-          Continue with Google
-        </a>
-      </section>
-    </main>
+      <p className="auth-switch">
+        Already have an account? <Link href="/sign-in">Sign in</Link>
+      </p>
+    </AuthShell>
   );
 }

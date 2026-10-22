@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { AuthShell } from "@/components/auth-shell";
 import { apiJson } from "@/lib/api";
 
 const GENERIC_LINK_ERROR = "Sign-in didn't finish. Please try again.";
@@ -79,24 +80,29 @@ export default function AuthConfirmPage() {
     });
   }, [router]);
 
-  return (
-    <main className="page page-narrow">
-      <section className="card stack">
-        <Link className="brand" href="/">
-          Quick Note
+  if (error) {
+    return (
+      <AuthShell>
+        <div className="auth-head">
+          <h1>This link didn&apos;t work</h1>
+        </div>
+        <p className="notice error" role="alert">
+          {error}
+        </p>
+        <Link className="button large block" href="/sign-in">
+          Back to sign in
         </Link>
-        <h1>{error ? "Sign-in problem" : "Finishing sign-in…"}</h1>
-        {error ? (
-          <div className="stack">
-            <p className="notice error">{error}</p>
-            <Link className="button" href="/sign-in">
-              Back to sign in
-            </Link>
-          </div>
-        ) : (
-          <p className="muted">Verifying your link and setting up the session.</p>
-        )}
-      </section>
-    </main>
+      </AuthShell>
+    );
+  }
+
+  return (
+    <AuthShell>
+      <span className="spinner" aria-hidden="true" />
+      <div className="auth-head" role="status">
+        <h1>Confirming your email…</h1>
+        <p>One moment while we sign you in.</p>
+      </div>
+    </AuthShell>
   );
 }
