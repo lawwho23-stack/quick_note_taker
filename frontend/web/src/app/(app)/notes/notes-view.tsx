@@ -115,6 +115,11 @@ export function NotesView() {
           if (!result.ok) {
             return { kind: "failed", message: errorMessage(result.error?.code, "Could not save this note.") };
           }
+          if (!metaRef.current.has(id)) {
+            // Deleted while this first save was in flight: remove it on the server too.
+            await apiJson<void>(`/api/v1/notes/${id}`, { method: "DELETE" });
+            return { kind: "ok" };
+          }
           metaRef.current.set(id, { version: result.data.version, persisted: true });
           patchListNote(id, {
             version: result.data.version,
@@ -750,7 +755,7 @@ export function NotesView() {
             type="button"
             onClick={() => setDeleteTarget(null)}
             disabled={deleting}
-            autoFocus
+            data-autofocus
           >
             Cancel
           </button>

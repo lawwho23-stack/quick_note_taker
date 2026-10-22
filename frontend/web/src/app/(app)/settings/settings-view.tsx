@@ -309,7 +309,7 @@ export function SettingsView() {
             type="button"
             onClick={() => setRevokeTarget(null)}
             disabled={revoking}
-            autoFocus
+            data-autofocus
           >
             Cancel
           </button>
@@ -345,7 +345,7 @@ export function SettingsView() {
               spellCheck={false}
               value={confirmText}
               onChange={(event) => setConfirmText(event.target.value)}
-              autoFocus
+              data-autofocus
             />
           </div>
           {deleteError ? (

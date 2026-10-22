@@ -27,6 +27,8 @@ export function Dialog({
     }
     if (open && !dialog.open) {
       dialog.showModal();
+      // React's autoFocus fires before the dialog opens, so set the safe start point here.
+      dialog.querySelector<HTMLElement>("[data-autofocus]")?.focus();
     } else if (!open && dialog.open) {
       dialog.close();
     }
