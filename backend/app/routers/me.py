@@ -6,15 +6,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
+from app.accounts import account_out
 from app.deps import Identity, current_account, current_identity
 from app.models import User
-from app.schemas import AccountOut, MeResponse, UserOut
+from app.schemas import MeResponse, UserOut
 
 router = APIRouter(prefix="/v1", tags=["account"])
-
-
-def _account_out(account: User) -> AccountOut:
-    return AccountOut(id=str(account.id), email=account.email, created_at=account.created_at)
 
 
 @router.get("/me", response_model=MeResponse)
@@ -24,5 +21,5 @@ async def me(
 ) -> MeResponse:
     return MeResponse(
         user=UserOut(id=identity.auth_user_id, email=identity.email),
-        account=_account_out(account),
+        account=account_out(account),
     )

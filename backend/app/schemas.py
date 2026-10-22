@@ -25,10 +25,11 @@ class ResendRequest(BaseModel):
 class ExchangeRequest(BaseModel):
     """Session handoff for email confirmation links (fragment tokens or PKCE code)."""
 
-    access_token: str | None = None
-    refresh_token: str | None = None
-    expires_in: int | None = None
-    code: str | None = None
+    access_token: str | None = Field(default=None, min_length=1, max_length=4096)
+    refresh_token: str | None = Field(default=None, min_length=1, max_length=1024)
+    # Sets the access cookie's lifetime, so keep it within what Supabase issues.
+    expires_in: int | None = Field(default=None, ge=60, le=3600)
+    code: str | None = Field(default=None, min_length=1, max_length=1024)
 
 
 class UserOut(BaseModel):

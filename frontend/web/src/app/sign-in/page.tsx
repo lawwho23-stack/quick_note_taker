@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
+import { AuthShell } from "@/components/auth-shell";
+import { PasswordInput } from "@/components/password-input";
+import { ResendButton } from "@/components/resend-button";
 import { apiJson } from "@/lib/api";
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
@@ -16,6 +19,13 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   access_denied: "Google sign-in was cancelled.",
 };
 
+const GENERIC_AUTH_ERROR = "Sign-in didn't finish. Please try again.";
+
+/** Only known codes get their own message; the raw query value is never shown. */
+function authErrorMessage(code: string): string {
+  return Object.hasOwn(AUTH_ERROR_MESSAGES, code) ? AUTH_ERROR_MESSAGES[code] : GENERIC_AUTH_ERROR;
+}
+
 function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -24,14 +34,17 @@ function SignInForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  // Set to the typed email when the API says it still needs confirming.
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(
-    authError ? (AUTH_ERROR_MESSAGES[authError] ?? `Sign-in failed (${authError}).`) : null,
+    authError ? authErrorMessage(authError) : null,
   );
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setError(null);
+    setUnconfirmedEmail(null);
 
     const result = await apiJson<AuthResponse>("/api/v1/auth/login", {
       method: "POST",
@@ -40,6 +53,10 @@ function SignInForm() {
 
     if (!result.ok) {
       setBusy(false);
+      if (result.status === 403 && result.error?.code === "email_not_confirmed") {
+        setUnconfirmedEmail(email);
+        return;
+      }
       setError(result.error?.message ?? "Could not sign in. Please try again.");
       return;
     }
@@ -49,19 +66,25 @@ function SignInForm() {
   }
 
   return (
-    <section className="card stack">
-      <div className="topbar">
-        <Link className="brand" href="/">
-          Quick Note
-        </Link>
-        <Link className="muted small" href="/sign-up">
-          Create account
-        </Link>
+    <>
+      <div className="auth-head">
+        <h1>Welcome back</h1>
+        <p>Sign in with your email and password.</p>
       </div>
-      <h1>Sign in</h1>
-      <p className="muted small">Use your email and password, or continue with Google.</p>
 
-      {error ? <p className="notice error">{error}</p> : null}
+      {error ? (
+        <p className="notice error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {unconfirmedEmail ? (
+        <div className="stack">
+          <p className="notice info" role="alert">
+            Confirm your email first. We sent a link to {unconfirmedEmail}.
+          </p>
+          <ResendButton email={unconfirmedEmail} />
+        </div>
+      ) : null}
 
       <form className="form" onSubmit={onSubmit}>
         <div className="field">
@@ -72,50 +95,31 @@ function SignInForm() {
             name="email"
             type="email"
             autoComplete="email"
+            placeholder="you@gmail.com"
             required
             value={email}
             onChange={(event) => setEmail(event.target.value)}
           />
         </div>
-        <div className="field">
-          <label htmlFor="password">Password</label>
-          <input
-            className="input"
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-        </div>
-        <button className="button" type="submit" disabled={busy}>
+        <PasswordInput value={password} onChange={setPassword} autoComplete="current-password" />
+        <button className="button large block" type="submit" disabled={busy}>
           {busy ? "Signing in…" : "Sign in"}
         </button>
       </form>
 
-      <hr className="divider" />
-
-      <a className="button secondary" href="/api/v1/auth/google?next=/notes">
-        Continue with Google
-      </a>
-    </section>
+      <p className="auth-switch">
+        New to Quick Note? <Link href="/sign-up">Create an account</Link>
+      </p>
+    </>
   );
 }
 
 export default function SignInPage() {
   return (
-    <main className="page page-narrow">
-      <Suspense
-        fallback={
-          <section className="card stack">
-            <p className="muted">Loading sign-in…</p>
-          </section>
-        }
-      >
+    <AuthShell>
+      <Suspense fallback={<p className="muted">Loading sign-in…</p>}>
         <SignInForm />
       </Suspense>
-    </main>
+    </AuthShell>
   );
 }

@@ -5,7 +5,20 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { AuthShell } from "@/components/auth-shell";
 import { apiJson } from "@/lib/api";
+
+const GENERIC_LINK_ERROR = "Sign-in didn't finish. Please try again.";
+
+/** Fixed messages for Supabase's fragment error codes; the raw URL text is never shown. */
+const LINK_ERROR_MESSAGES: Record<string, string> = {
+  otp_expired: "This link has expired or was already used. Sign in to request a new one.",
+  access_denied: "This link is no longer valid. Sign in to request a new one.",
+};
+
+function linkErrorMessage(code: string): string {
+  return Object.hasOwn(LINK_ERROR_MESSAGES, code) ? LINK_ERROR_MESSAGES[code] : GENERIC_LINK_ERROR;
+}
 
 /**
  * Handles email-confirmation and sign-in links.
@@ -32,13 +45,13 @@ export default function AuthConfirmPage() {
     const accessToken = hash.get("access_token");
     const refreshToken = hash.get("refresh_token");
     const expiresIn = hash.get("expires_in");
-    const hashError = hash.get("error_description") ?? hash.get("error");
+    const hashError = hash.get("error_code") ?? hash.get("error");
 
     window.history.replaceState(null, "", "/auth/confirm");
 
     if (hashError) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot mount effect reading the URL fragment
-      setError(hashError);
+      setError(linkErrorMessage(hashError));
       return;
     }
     if (!code && !accessToken) {
@@ -67,24 +80,29 @@ export default function AuthConfirmPage() {
     });
   }, [router]);
 
-  return (
-    <main className="page page-narrow">
-      <section className="card stack">
-        <Link className="brand" href="/">
-          Quick Note
+  if (error) {
+    return (
+      <AuthShell>
+        <div className="auth-head">
+          <h1>This link didn&apos;t work</h1>
+        </div>
+        <p className="notice error" role="alert">
+          {error}
+        </p>
+        <Link className="button large block" href="/sign-in">
+          Back to sign in
         </Link>
-        <h1>{error ? "Sign-in problem" : "Finishing sign-in…"}</h1>
-        {error ? (
-          <div className="stack">
-            <p className="notice error">{error}</p>
-            <Link className="button" href="/sign-in">
-              Back to sign in
-            </Link>
-          </div>
-        ) : (
-          <p className="muted">Verifying your link and setting up the session.</p>
-        )}
-      </section>
-    </main>
+      </AuthShell>
+    );
+  }
+
+  return (
+    <AuthShell>
+      <span className="spinner" aria-hidden="true" />
+      <div className="auth-head" role="status">
+        <h1>Confirming your email…</h1>
+        <p>One moment while we sign you in.</p>
+      </div>
+    </AuthShell>
   );
 }
