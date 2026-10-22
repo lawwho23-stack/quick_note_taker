@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import uuid
 from collections.abc import Callable
@@ -9,6 +10,7 @@ from collections.abc import Callable
 import httpx
 import pytest
 from app.config import Settings
+from app.extension_tokens import get_token_store
 from app.notes import get_note_store
 from app.rate_limit import (
     NoopRateLimiter,
@@ -21,6 +23,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from tests.conftest import ALLOWED_ORIGIN, FakeDbSession, make_account
+from tests.test_extension_tokens_api import FakeTokenStore
 from tests.test_notes_api import SESSION, FakeNoteStore
 
 NOW = 1_760_000_082.0  # 42 seconds into a one-minute window
@@ -199,3 +202,38 @@ def test_auth_fails_closed_when_redis_is_down(client: TestClient, limiter: FakeL
 
     assert response.status_code == 503
     assert response.json()["error"]["code"] == "auth_unavailable"
+
+
+@pytest.mark.parametrize(
+    ("over_limit", "down", "expected"), [(True, False, 429), (False, True, 201)]
+)
+def test_extension_tokens_are_limited_per_token(
+    app: FastAPI,
+    client: TestClient,
+    limiter: FakeLimiter,
+    notes: FakeNoteStore,
+    fake_db: FakeDbSession,
+    over_limit: bool,
+    down: bool,
+    expected: int,
+) -> None:
+    assert fake_db.account is not None
+    tokens = FakeTokenStore({fake_db.account.id: fake_db.account})
+    app.dependency_overrides[get_token_store] = lambda: tokens
+    token, secret = asyncio.run(tokens.create(fake_db.account.id, None))
+    limiter.over_limit, limiter.down = over_limit, down
+
+    response = client.post(
+        "/v1/notes",
+        json={"id": str(uuid.uuid4()), "body": "x"},
+        headers={"Authorization": f"Bearer {secret}"},
+    )
+
+    assert response.status_code == expected
+    assert limiter.keys == [f"extension:{token.id}"]
+    assert all(secret not in key for key in limiter.keys)
+    if expected == 429:
+        assert response.headers["retry-after"] == "17"
+        assert notes.notes == {}
+    else:
+        assert len(notes.notes) == 1
