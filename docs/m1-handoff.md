@@ -143,15 +143,12 @@ lint, typecheck and build pass.
 
 - Resend now returns 429 with `Retry-After` when rate-limited, instead of a false 202. The website
   shows a countdown, and sign-in offers a resend button for unconfirmed emails (`ResendButton`).
-- New `app/rate_limit.py`: Upstash Redis limits on register (10/h per IP), login (10/5 min per
-  IP+email) and resend (1/min and 5/h per email). It is off until `UPSTASH_REDIS_REST_URL` and
-  `UPSTASH_REDIS_REST_TOKEN` are set on `quick-note-api`. If Redis is down, requests are allowed.
 - A Supabase outage or 429 no longer signs users out (`get_user` returns 503; refresh keeps cookies
   unless the token is rejected). Network timeouts return 503 instead of 500.
 - The Google callback requires the state cookie. `/exchange` bounds `expires_in` (60–3600 s) and
   token lengths. The website sends anti-framing and nosniff headers, and no longer shows raw
   error text from the URL.
 
-**Verify on staging before trusting the IP limits:** the web project proxies `/api/v1/*` to the
-API project. Confirm `x-forwarded-for` there holds the visitor's IP, not a Vercel proxy IP. If it
-holds a proxy IP, every visitor shares one register bucket.
+
+Rate limiting (planned on Upstash Redis) is deferred: the website has a 60-second resend
+cooldown only. Supabase's own email cap still applies.

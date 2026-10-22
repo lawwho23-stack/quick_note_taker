@@ -26,17 +26,9 @@ from app.cookies import (
     set_session_cookies,
 )
 from app.db import get_session
-from app.deps import client_ip, get_auth_provider
+from app.deps import get_auth_provider
 from app.errors import ApiError, error_body
 from app.models import User
-from app.rate_limit import (
-    LOGIN,
-    REGISTER,
-    RESEND_BURST,
-    RESEND_HOURLY,
-    RateLimiter,
-    get_rate_limiter,
-)
 from app.schemas import (
     AuthResponse,
     ExchangeRequest,
@@ -64,7 +56,6 @@ router = APIRouter(prefix="/v1/auth", tags=["auth"], dependencies=[Depends(requi
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 ProviderDep = Annotated[SupabaseAuth, Depends(get_auth_provider)]
-LimiterDep = Annotated[RateLimiter, Depends(get_rate_limiter)]
 
 
 def _user_out(auth_session: AuthSession) -> UserOut:
@@ -94,15 +85,12 @@ def _confirmation_redirect(settings: Settings) -> str:
 @router.post("/register", response_model=RegisterResponse)
 async def register(
     payload: RegisterRequest,
-    request: Request,
     response: Response,
     provider: ProviderDep,
-    limiter: LimiterDep,
     session: SessionDep,
     settings: SettingsDep,
 ) -> RegisterResponse:
     """Create an account. With email confirmation on, no session is issued yet."""
-    await limiter.hit(REGISTER, client_ip(request))
     result = await provider.sign_up(
         payload.email,
         payload.password,
@@ -132,7 +120,6 @@ async def register(
 async def resend_confirmation(
     payload: ResendRequest,
     provider: ProviderDep,
-    limiter: LimiterDep,
     settings: SettingsDep,
 ) -> Response:
     """Send another confirmation email.
@@ -141,9 +128,6 @@ async def resend_confirmation(
     be used to discover accounts. Rate limits are the exception: the user must
     learn to wait instead of being told an email is on its way.
     """
-    email = payload.email.lower()
-    await limiter.hit(RESEND_BURST, email)
-    await limiter.hit(RESEND_HOURLY, email)
     try:
         await provider.resend_confirmation(
             payload.email, redirect_to=_confirmation_redirect(settings)
@@ -158,14 +142,11 @@ async def resend_confirmation(
 @router.post("/login", response_model=AuthResponse)
 async def login(
     payload: LoginRequest,
-    request: Request,
     response: Response,
     provider: ProviderDep,
-    limiter: LimiterDep,
     session: SessionDep,
     settings: SettingsDep,
 ) -> AuthResponse:
-    await limiter.hit(LOGIN, f"{client_ip(request)}|{payload.email.lower()}")
     auth_session = await provider.sign_in(payload.email, payload.password)
     account = await ensure_account(
         session,

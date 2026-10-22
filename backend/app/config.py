@@ -45,10 +45,6 @@ class Settings(BaseSettings):
     csrf_cookie_max_age: int = 60 * 60 * 24 * 30
     default_next_path: str = "/notes"
 
-    # Rate limiting (Upstash Redis REST). Empty values switch limits off.
-    upstash_redis_rest_url: str = ""
-    upstash_redis_rest_token: str = ""
-
     @field_validator("supabase_url", "web_base_url")
     @classmethod
     def _strip_trailing_slash(cls, value: str) -> str:
