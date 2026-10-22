@@ -72,7 +72,7 @@ export default function HomePage() {
 
         <section className="hero">
           <span className="hero-quinn">
-            <QuinnRunning size={150} />
+            <QuinnRunning size={170} />
           </span>
           <span className="pill">One shortcut. One text box.</span>
           <h1>Catch the idea before it slips away.</h1>

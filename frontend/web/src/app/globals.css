@@ -440,7 +440,6 @@ kbd.small {
 
 /* Quinn running and writing (QuinnRunning in components/quinn.tsx). */
 .qr-bob,
-.qr-leg,
 .qr-shadow,
 .qr-speed,
 .qr-scribble {
@@ -448,20 +447,23 @@ kbd.small {
   transform-origin: center;
 }
 
+/* One stride is 0.6s: legs swing once, the body bobs twice (once per step). */
 .qr-bob {
-  animation: qr-bob 0.5s ease-in-out infinite;
+  animation: qr-bob 0.3s ease-in-out infinite;
 }
 
-.qr-leg {
-  animation: qr-step 0.5s ease-in-out infinite;
+.qr-swing {
+  transform-box: view-box;
+  transform-origin: 78px 98px;
+  animation: qr-swing 0.6s ease-in-out infinite;
 }
 
-.qr-leg-2 {
-  animation-delay: -0.25s;
+.qr-swing-far {
+  animation-delay: -0.3s;
 }
 
 .qr-shadow {
-  animation: qr-shadow 0.5s ease-in-out infinite;
+  animation: qr-shadow 0.3s ease-in-out infinite;
 }
 
 .qr-speed {
@@ -507,13 +509,13 @@ kbd.small {
   }
 }
 
-@keyframes qr-step {
+@keyframes qr-swing {
   0%,
   100% {
-    transform: translateY(0);
+    transform: rotate(-38deg);
   }
   50% {
-    transform: translateY(-9px);
+    transform: rotate(38deg);
   }
 }
 

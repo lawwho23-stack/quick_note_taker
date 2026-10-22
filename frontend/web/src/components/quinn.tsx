@@ -22,68 +22,83 @@ export function Quinn({ size = 120 }: { size?: number }) {
 }
 
 /**
- * Quinn running while writing in a notepad. Pure SVG + CSS animation (the
- * `qr-*` classes in globals.css); it stands still for reduced-motion users.
+ * Quinn running to the right in side view, writing in a notepad as he goes.
+ * Pure SVG + CSS animation (the `qr-*` classes in globals.css); he stands
+ * still for reduced-motion users.
  */
-export function QuinnRunning({ size = 150 }: { size?: number }) {
+export function QuinnRunning({ size = 160 }: { size?: number }) {
   return (
     <svg
       className="quinn-running"
       width={size}
-      height={size}
-      viewBox="0 0 150 150"
+      height={Math.round((size * 150) / 160)}
+      viewBox="0 0 160 150"
       aria-hidden="true"
     >
-      <ellipse className="qr-shadow" cx="66" cy="142" rx="34" ry="5" fill="#14161C" fillOpacity="0.12" />
+      <ellipse className="qr-shadow" cx="80" cy="143" rx="34" ry="5" fill="#14161C" fillOpacity="0.12" />
 
-      {/* Speed lines: he is running to the right. */}
+      {/* Speed lines trail behind him. */}
       <g stroke="#7DC242" strokeWidth="3.5" strokeLinecap="round">
-        <line className="qr-speed" x1="4" y1="62" x2="20" y2="62" />
-        <line className="qr-speed qr-speed-2" x1="0" y1="84" x2="22" y2="84" />
-        <line className="qr-speed qr-speed-3" x1="6" y1="106" x2="20" y2="106" />
+        <line className="qr-speed" x1="6" y1="52" x2="24" y2="52" />
+        <line className="qr-speed qr-speed-2" x1="2" y1="76" x2="26" y2="76" />
+        <line className="qr-speed qr-speed-3" x1="8" y1="100" x2="24" y2="100" />
       </g>
 
-      <g transform="rotate(5 66 140)">
+      <g transform="rotate(8 80 140)">
         <g className="qr-bob">
-          {/* Legs pump up and down in turn. */}
-          <g className="qr-leg">
-            <line x1="60" y1="96" x2="60" y2="124" stroke="#2C5A1B" strokeWidth="4" strokeLinecap="round" />
-            <ellipse cx="54" cy="130" rx="13" ry="6.5" fill="#E5484D" stroke="#2C5A1B" strokeWidth="2.5" />
-            <ellipse cx="48" cy="131" rx="5.5" ry="4" fill="#FFFFFF" />
-          </g>
-          <g className="qr-leg qr-leg-2">
-            <line x1="72" y1="96" x2="72" y2="124" stroke="#2C5A1B" strokeWidth="4" strokeLinecap="round" />
-            <ellipse cx="78" cy="130" rx="13" ry="6.5" fill="#E5484D" stroke="#2C5A1B" strokeWidth="2.5" />
-            <ellipse cx="84" cy="131" rx="5.5" ry="4" fill="#FFFFFF" />
+          {/* Far leg: darker, swings opposite the near leg. */}
+          <g className="qr-swing qr-swing-far">
+            <line x1="76" y1="98" x2="76" y2="126" stroke="#1F3B14" strokeWidth="4" strokeLinecap="round" />
+            <ellipse cx="82" cy="131" rx="12" ry="6" fill="#B8363A" stroke="#1F3B14" strokeWidth="2.5" />
+            <ellipse cx="89" cy="132" rx="4.5" ry="3.5" fill="#E9E9EC" />
           </g>
 
-          <ellipse cx="66" cy="90" rx="13" ry="9" fill="#5FA02E" stroke="#2C5A1B" strokeWidth="3" />
-
-          {/* Right arm holds the notepad. */}
-          <path d="M79 90 Q94 96 104 114" fill="none" stroke="#2C5A1B" strokeWidth="4" strokeLinecap="round" />
-          <g transform="rotate(-8 92 106)">
-            <rect x="74" y="92" width="36" height="30" rx="4" fill="#FFFFFF" stroke="#2C5A1B" strokeWidth="2.5" />
-            <rect x="74" y="92" width="36" height="6" rx="3" fill="#CDEFA9" />
+          {/* Far arm holds the notepad up in front. */}
+          <path d="M82 90 Q96 92 108 100" fill="none" stroke="#1F3B14" strokeWidth="4" strokeLinecap="round" />
+          <g transform="rotate(-14 116 96)">
+            <rect x="100" y="80" width="32" height="32" rx="4" fill="#FFFFFF" stroke="#2C5A1B" strokeWidth="2.5" />
+            <rect x="100" y="80" width="32" height="6" rx="3" fill="#CDEFA9" />
             <g stroke="#8CB86B" strokeWidth="2.5" strokeLinecap="round">
-              <line className="qr-line qr-line-1" x1="80" y1="104" x2="104" y2="104" />
-              <line className="qr-line qr-line-2" x1="80" y1="110" x2="102" y2="110" />
-              <line className="qr-line qr-line-3" x1="80" y1="116" x2="94" y2="116" />
+              <line className="qr-line qr-line-1" x1="105" y1="93" x2="127" y2="93" />
+              <line className="qr-line qr-line-2" x1="105" y1="99" x2="125" y2="99" />
+              <line className="qr-line qr-line-3" x1="105" y1="105" x2="118" y2="105" />
             </g>
           </g>
-          <circle cx="105" cy="116" r="5.5" fill="#FFFFFF" stroke="#2C5A1B" strokeWidth="2.5" />
+          <circle cx="108" cy="102" r="5" fill="#FFFFFF" stroke="#1F3B14" strokeWidth="2.5" />
 
-          <g transform="translate(6 -14)">
-            <QuinnFace />
+          <ellipse cx="78" cy="92" rx="12" ry="9" fill="#5FA02E" stroke="#2C5A1B" strokeWidth="3" />
+
+          {/* Near leg. */}
+          <g className="qr-swing">
+            <line x1="80" y1="98" x2="80" y2="126" stroke="#2C5A1B" strokeWidth="4" strokeLinecap="round" />
+            <ellipse cx="86" cy="131" rx="12" ry="6" fill="#E5484D" stroke="#2C5A1B" strokeWidth="2.5" />
+            <ellipse cx="93" cy="132" rx="4.5" ry="3.5" fill="#FFFFFF" />
           </g>
 
-          {/* Left arm reaches across and scribbles with a pencil. */}
+          {/* Head in profile, facing right. */}
+          <ellipse cx="76" cy="50" rx="38" ry="36" fill="#7DC242" stroke="#2C5A1B" strokeWidth="4" />
+          <ellipse cx="66" cy="19" rx="8" ry="3.5" fill="#A8DC6E" />
+          <line x1="86" y1="50" x2="54" y2="48" stroke="#2C5A1B" strokeWidth="4" strokeLinecap="round" />
+          <circle cx="52" cy="50" r="5" fill="#5FA02E" stroke="#2C5A1B" strokeWidth="3" />
+          <rect x="86" y="34" width="30" height="32" rx="9" fill="#CDEFA9" stroke="#2C5A1B" strokeWidth="5" />
+          <ellipse cx="104" cy="51" rx="6" ry="8.5" fill="#1B1B1F" />
+          <circle cx="106" cy="47" r="2.4" fill="#FFFFFF" />
+          <path
+            d="M96 72 Q104 84 112 70 Z"
+            fill="#3A1830"
+            stroke="#2C5A1B"
+            strokeWidth="2.5"
+            strokeLinejoin="round"
+          />
+
+          {/* Near arm scribbles with the pencil. */}
           <g className="qr-scribble">
-            <path d="M53 90 Q54 108 74 108" fill="none" stroke="#2C5A1B" strokeWidth="4" strokeLinecap="round" />
-            <g transform="rotate(-40 80 102)">
-              <rect x="77" y="88" width="6" height="16" rx="1.5" fill="#F5C542" stroke="#2C5A1B" strokeWidth="1.8" />
-              <path d="M77 104 L80 109 L83 104 Z" fill="#2C5A1B" />
+            <path d="M74 92 Q84 108 102 104" fill="none" stroke="#2C5A1B" strokeWidth="4" strokeLinecap="round" />
+            <g transform="rotate(-35 108 96)">
+              <rect x="105" y="82" width="6" height="16" rx="1.5" fill="#F5C542" stroke="#2C5A1B" strokeWidth="1.8" />
+              <path d="M105 98 L108 103 L111 98 Z" fill="#2C5A1B" />
             </g>
-            <circle cx="76" cy="108" r="5.5" fill="#FFFFFF" stroke="#2C5A1B" strokeWidth="2.5" />
+            <circle cx="102" cy="104" r="5.5" fill="#FFFFFF" stroke="#2C5A1B" strokeWidth="2.5" />
           </g>
         </g>
       </g>
