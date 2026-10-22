@@ -218,6 +218,7 @@ export default function HomePage() {
             Quick Note
           </span>
           <span>Capture ideas without leaving what you are doing.</span>
+          <Link href="/privacy">Privacy</Link>
         </footer>
       </div>
 
