@@ -438,6 +438,186 @@ kbd.small {
   margin-bottom: -12px;
 }
 
+/* Quinn running and writing (QuinnRunning in components/quinn.tsx). */
+.qr-bob,
+.qr-leg,
+.qr-shadow,
+.qr-speed,
+.qr-scribble {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.qr-bob {
+  animation: qr-bob 0.5s ease-in-out infinite;
+}
+
+.qr-leg {
+  animation: qr-step 0.5s ease-in-out infinite;
+}
+
+.qr-leg-2 {
+  animation-delay: -0.25s;
+}
+
+.qr-shadow {
+  animation: qr-shadow 0.5s ease-in-out infinite;
+}
+
+.qr-speed {
+  animation: qr-speed 0.6s linear infinite;
+}
+
+.qr-speed-2 {
+  animation-delay: -0.2s;
+}
+
+.qr-speed-3 {
+  animation-delay: -0.4s;
+}
+
+.qr-scribble {
+  animation: qr-scribble 0.32s linear infinite;
+}
+
+.qr-line {
+  stroke-dasharray: 26;
+  stroke-dashoffset: 26;
+}
+
+.qr-line-1 {
+  animation: qr-write-1 3s linear infinite;
+}
+
+.qr-line-2 {
+  animation: qr-write-2 3s linear infinite;
+}
+
+.qr-line-3 {
+  animation: qr-write-3 3s linear infinite;
+}
+
+@keyframes qr-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes qr-step {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-9px);
+  }
+}
+
+@keyframes qr-shadow {
+  0%,
+  100% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(0.82);
+  }
+}
+
+@keyframes qr-speed {
+  0% {
+    transform: translateX(10px);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-14px);
+    opacity: 0;
+  }
+}
+
+@keyframes qr-scribble {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(3px, -1px);
+  }
+  50% {
+    transform: translate(6px, 1px);
+  }
+  75% {
+    transform: translate(3px, 0);
+  }
+}
+
+@keyframes qr-write-1 {
+  0% {
+    stroke-dashoffset: 26;
+  }
+  25%,
+  90% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes qr-write-2 {
+  0%,
+  25% {
+    stroke-dashoffset: 26;
+  }
+  50%,
+  90% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes qr-write-3 {
+  0%,
+  50% {
+    stroke-dashoffset: 26;
+  }
+  75%,
+  90% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quinn-running * {
+    animation: none !important;
+  }
+
+  .qr-line {
+    stroke-dashoffset: 0;
+  }
+
+  .qr-speed {
+    opacity: 0;
+  }
+}
+
 .hero h1 {
   max-width: 780px;
   font-size: clamp(38px, 6vw, 60px);

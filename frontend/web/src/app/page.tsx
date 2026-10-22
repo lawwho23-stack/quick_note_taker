@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { AuthFragmentRedirect } from "@/components/auth-fragment-redirect";
 import { Logo, LogoMark } from "@/components/logo";
-import { Quinn } from "@/components/quinn";
+import { QuinnRunning } from "@/components/quinn";
 
 function Check() {
   return (
@@ -72,7 +72,7 @@ export default function HomePage() {
 
         <section className="hero">
           <span className="hero-quinn">
-            <Quinn size={112} />
+            <QuinnRunning size={150} />
           </span>
           <span className="pill">One shortcut. One text box.</span>
           <h1>Catch the idea before it slips away.</h1>
