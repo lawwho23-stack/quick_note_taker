@@ -128,3 +128,9 @@ jobs:
           end
           $$;
           SQL
+
+      - name: Database tests (row-level security, idempotent creates)
+        # Runs against the migrated schema; the tests switch to qn_runtime so RLS applies.
+        env:
+          QN_DB_TEST_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+        run: uv run pytest -m db

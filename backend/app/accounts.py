@@ -25,6 +25,8 @@ async def ensure_account(session: AsyncSession, *, auth_user_id: str, email: str
 
     Account rows are never created while serving an ordinary protected request:
     a deleted account must not be recreated by an old, unexpired access token.
+
+    Only flushes: the calling handler commits once, at the end of its work.
     """
     statement = (
         pg_insert(User)
@@ -36,7 +38,7 @@ async def ensure_account(session: AsyncSession, *, auth_user_id: str, email: str
         .returning(User)
     )
     account: User = (await session.execute(statement)).scalar_one()
-    await session.commit()
+    await session.flush()
     return account
 
 

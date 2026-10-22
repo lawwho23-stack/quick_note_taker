@@ -154,6 +154,9 @@ class FakeDbSession:
             return FakeResult(self.account)
         return FakeResult(self.account, missing=self.account is None)
 
+    async def flush(self) -> None:
+        return None
+
     async def commit(self) -> None:
         self.commits += 1
 

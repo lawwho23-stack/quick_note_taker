@@ -8,7 +8,7 @@ from app.config import Settings, get_settings
 from app.errors import register_error_handlers
 from app.logging_setup import configure_logging
 from app.request_context import RequestContextMiddleware
-from app.routers import auth, health, me
+from app.routers import auth, health, me, notes
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -18,7 +18,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(
         title="Quick Note API",
         version="0.1.0",
-        summary="Quick Note backend: authentication now, notes next.",
+        summary="Quick Note backend: accounts and notes.",
         docs_url="/docs",
         redoc_url=None,
         openapi_url="/openapi.json",
@@ -33,6 +33,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health.router)
     app.include_router(auth.router)
     app.include_router(me.router)
+    app.include_router(notes.router)
     return app
 
 
