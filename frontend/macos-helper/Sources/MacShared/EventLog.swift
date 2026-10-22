@@ -30,7 +30,13 @@ public final class EventLog {
     /// Written from the main thread only (event tap callbacks and menu actions
     /// both run on the main run loop), so no locking is needed.
     public func log(_ type: String, _ fields: [String: Any] = [:]) {
-        var object: [String: Any] = ["ts": Date().timeIntervalSince1970, "type": type]
+        // `ts`: wall clock (epoch seconds) for matching against the beacon log.
+        // `mono_ms`: monotonic milliseconds since boot, for precise intervals.
+        var object: [String: Any] = [
+            "ts": Date().timeIntervalSince1970,
+            "mono_ms": (monotonicMs() * 100).rounded() / 100,
+            "type": type,
+        ]
         for (key, value) in fields {
             object[key] = value
         }
