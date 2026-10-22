@@ -1,9 +1,10 @@
-/* Quick Note brand: tokens from the design canvas (Logo board). */
+/* Quick Note brand: Quinn's greens, from the design canvas (Quinn boards). */
 :root {
-  --accent: #1f5fe0;
-  --accent-ink: #174bb5;
-  --accent-soft: #e8f0fd;
-  --accent-line: #b9ccf7;
+  --accent: #2c5a1b;
+  --accent-ink: #1f3b14;
+  --accent-soft: #eaf6dc;
+  --accent-line: #cdefa9;
+  --quinn: #7dc242;
   --ink: #14161c;
   --text: #14161c;
   --body: #4a4f5c;
@@ -431,6 +432,10 @@ kbd.small {
   color: var(--accent-ink);
   font-size: 13px;
   font-weight: 600;
+}
+
+.hero-quinn {
+  margin-bottom: -12px;
 }
 
 .hero h1 {

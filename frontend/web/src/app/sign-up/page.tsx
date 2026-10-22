@@ -25,25 +25,6 @@ function inboxLink(email: string): { label: string; href: string } | null {
   return null;
 }
 
-function MailIcon() {
-  return (
-    <svg
-      width="26"
-      height="26"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="3" y="5" width="18" height="14" rx="3" />
-      <path d="M4 7l8 6 8-6" />
-    </svg>
-  );
-}
-
 export default function SignUpPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -82,9 +63,6 @@ export default function SignUpPage() {
     const inbox = inboxLink(email);
     return (
       <AuthShell>
-        <span className="auth-icon">
-          <MailIcon />
-        </span>
         <div className="auth-head">
           <h1>Check your inbox</h1>
           <p>

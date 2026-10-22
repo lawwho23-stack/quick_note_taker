@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { AuthFragmentRedirect } from "@/components/auth-fragment-redirect";
 import { Logo, LogoMark } from "@/components/logo";
+import { Quinn } from "@/components/quinn";
 
 function Check() {
   return (
@@ -10,7 +11,7 @@ function Check() {
       height="20"
       viewBox="0 0 24 24"
       fill="none"
-      stroke="#1F5FE0"
+      stroke="#2C5A1B"
       strokeWidth="2.4"
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -28,7 +29,7 @@ function Pencil() {
       height="18"
       viewBox="0 0 24 24"
       fill="none"
-      stroke="#1F5FE0"
+      stroke="#2C5A1B"
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -70,6 +71,9 @@ export default function HomePage() {
         </header>
 
         <section className="hero">
+          <span className="hero-quinn">
+            <Quinn size={112} />
+          </span>
           <span className="pill">One shortcut. One text box.</span>
           <h1>Catch the idea before it slips away.</h1>
           <p className="lede">
@@ -210,7 +214,7 @@ export default function HomePage() {
 
         <footer className="site-footer">
           <span className="row" style={{ gap: 10 }}>
-            <LogoMark size={24} />
+            <LogoMark size={40} />
             Quick Note
           </span>
           <span>Capture ideas without leaving what you are doing.</span>
