@@ -269,3 +269,65 @@ async def test_authorize_url_contains_pkce_parameters(settings: Settings) -> Non
     assert "provider=google" in url
     assert "code_challenge_method=s256" in url
     assert "state=state-value" in url
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        lambda p: p.sign_up("user@example.com", "password1", redirect_to="http://x/auth/confirm"),
+        lambda p: p.resend_confirmation("user@example.com", redirect_to="http://x/auth/confirm"),
+        lambda p: p.sign_in("user@example.com", "pw"),
+        lambda p: p.refresh("rt"),
+        lambda p: p.exchange_pkce("code", "verifier"),
+        lambda p: p.get_user("at"),
+    ],
+    ids=["sign_up", "resend", "sign_in", "refresh", "exchange_pkce", "get_user"],
+)
+@pytest.mark.parametrize("failure", [httpx.ConnectError, httpx.ReadTimeout])
+async def test_network_failure_maps_to_unavailable(
+    settings: Settings, call: Callable[[SupabaseAuth], Any], failure: type[httpx.TransportError]
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise failure("boom", request=request)
+
+    provider = make_provider(settings, handler)
+    try:
+        with pytest.raises(ApiError) as exc_info:
+            await call(provider)
+    finally:
+        await provider.aclose()
+
+    assert exc_info.value.status_code == 503
+    assert exc_info.value.code == "auth_unavailable"
+
+
+@pytest.mark.parametrize("status", [429, 500, 503])
+async def test_get_user_outage_is_not_an_expired_session(settings: Settings, status: int) -> None:
+    provider = make_provider(settings, lambda _: httpx.Response(status, json={}))
+    try:
+        with pytest.raises(ApiError) as exc_info:
+            await provider.get_user("at")
+    finally:
+        await provider.aclose()
+
+    assert exc_info.value.status_code == 503
+    assert exc_info.value.code == "auth_unavailable"
+
+
+async def test_rate_limit_passes_retry_after_through(settings: Settings) -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            429,
+            headers={"retry-after": "42"},
+            json={"error_code": "over_email_send_rate_limit", "msg": "slow down"},
+        )
+
+    provider = make_provider(settings, handler)
+    try:
+        with pytest.raises(ApiError) as exc_info:
+            await provider.resend_confirmation("user@example.com", redirect_to="http://x")
+    finally:
+        await provider.aclose()
+
+    assert exc_info.value.code == "rate_limited"
+    assert exc_info.value.headers == {"retry-after": "42"}

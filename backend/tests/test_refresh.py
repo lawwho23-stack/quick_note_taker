@@ -52,3 +52,25 @@ def test_refresh_rejected_token_clears_session(
     assert response.json()["error"]["code"] == "session_expired"
     raw = "".join(response.headers.get_list("set-cookie"))
     assert "qn_at=" in raw and "qn_rt=" in raw
+
+
+def test_refresh_outage_keeps_the_session(
+    client: TestClient, fake_provider: FakeAuthProvider
+) -> None:
+    fake_provider.fail_refresh = ApiError(503, "auth_unavailable", "unavailable")
+
+    response = client.post("/v1/auth/refresh", headers={**ORIGIN, **REFRESH_COOKIE})
+
+    assert response.status_code == 503
+    assert "qn_rt=" not in "".join(response.headers.get_list("set-cookie"))
+
+
+def test_refresh_rate_limit_keeps_the_session(
+    client: TestClient, fake_provider: FakeAuthProvider
+) -> None:
+    fake_provider.fail_refresh = ApiError(429, "rate_limited", "slow down")
+
+    response = client.post("/v1/auth/refresh", headers={**ORIGIN, **REFRESH_COOKIE})
+
+    assert response.status_code == 429
+    assert "qn_rt=" not in "".join(response.headers.get_list("set-cookie"))

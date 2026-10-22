@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.errors import ApiError
 from app.models import User
+from app.schemas import AccountOut
 
 
 def _as_uuid(value: str) -> uuid.UUID:
@@ -43,3 +44,7 @@ async def get_account(session: AsyncSession, *, auth_user_id: str) -> User | Non
     statement = select(User).where(User.auth_user_id == _as_uuid(auth_user_id))
     account: User | None = (await session.execute(statement)).scalar_one_or_none()
     return account
+
+
+def account_out(account: User) -> AccountOut:
+    return AccountOut(id=str(account.id), email=account.email, created_at=account.created_at)

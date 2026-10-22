@@ -10,6 +10,21 @@ if (!apiBaseUrl) {
 
 const nextConfig: NextConfig = {
   transpilePackages: ["@quick-note/shared"],
+  // Security headers on every page: no framing (clickjacking), no MIME
+  // sniffing, and no full URLs leaked to other sites in the Referer header.
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+        ],
+      },
+    ];
+  },
   async rewrites() {
     if (!apiBaseUrl) {
       return [];

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
+import { ResendButton } from "@/components/resend-button";
 import { apiJson } from "@/lib/api";
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
@@ -16,6 +17,13 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   access_denied: "Google sign-in was cancelled.",
 };
 
+const GENERIC_AUTH_ERROR = "Sign-in didn't finish. Please try again.";
+
+/** Only known codes get their own message; the raw query value is never shown. */
+function authErrorMessage(code: string): string {
+  return Object.hasOwn(AUTH_ERROR_MESSAGES, code) ? AUTH_ERROR_MESSAGES[code] : GENERIC_AUTH_ERROR;
+}
+
 function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -24,14 +32,17 @@ function SignInForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  // Set to the typed email when the API says it still needs confirming.
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(
-    authError ? (AUTH_ERROR_MESSAGES[authError] ?? `Sign-in failed (${authError}).`) : null,
+    authError ? authErrorMessage(authError) : null,
   );
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setError(null);
+    setUnconfirmedEmail(null);
 
     const result = await apiJson<AuthResponse>("/api/v1/auth/login", {
       method: "POST",
@@ -41,6 +52,9 @@ function SignInForm() {
     if (!result.ok) {
       setBusy(false);
       setError(result.error?.message ?? "Could not sign in. Please try again.");
+      if (result.status === 403 && result.error?.code === "email_not_confirmed") {
+        setUnconfirmedEmail(email);
+      }
       return;
     }
 
@@ -62,6 +76,7 @@ function SignInForm() {
       <p className="muted small">Use your email and password, or continue with Google.</p>
 
       {error ? <p className="notice error">{error}</p> : null}
+      {unconfirmedEmail ? <ResendButton email={unconfirmedEmail} /> : null}
 
       <form className="form" onSubmit={onSubmit}>
         <div className="field">

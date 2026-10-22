@@ -37,6 +37,15 @@ async def get_auth_provider(
         await provider.aclose()
 
 
+def client_ip(request: Request) -> str:
+    """The caller's IP: Vercel puts the real client first in x-forwarded-for."""
+    forwarded = request.headers.get("x-forwarded-for", "")
+    first = forwarded.split(",")[0].strip()
+    if first:
+        return first
+    return request.client.host if request.client else "unknown"
+
+
 def _bearer_token(request: Request) -> str | None:
     header = request.headers.get("authorization", "")
     if header.lower().startswith("bearer "):

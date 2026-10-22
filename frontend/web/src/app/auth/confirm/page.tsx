@@ -7,6 +7,18 @@ import { useEffect, useRef, useState } from "react";
 
 import { apiJson } from "@/lib/api";
 
+const GENERIC_LINK_ERROR = "Sign-in didn't finish. Please try again.";
+
+/** Fixed messages for Supabase's fragment error codes; the raw URL text is never shown. */
+const LINK_ERROR_MESSAGES: Record<string, string> = {
+  otp_expired: "This link has expired or was already used. Sign in to request a new one.",
+  access_denied: "This link is no longer valid. Sign in to request a new one.",
+};
+
+function linkErrorMessage(code: string): string {
+  return Object.hasOwn(LINK_ERROR_MESSAGES, code) ? LINK_ERROR_MESSAGES[code] : GENERIC_LINK_ERROR;
+}
+
 /**
  * Handles email-confirmation and sign-in links.
  *
@@ -32,13 +44,13 @@ export default function AuthConfirmPage() {
     const accessToken = hash.get("access_token");
     const refreshToken = hash.get("refresh_token");
     const expiresIn = hash.get("expires_in");
-    const hashError = hash.get("error_description") ?? hash.get("error");
+    const hashError = hash.get("error_code") ?? hash.get("error");
 
     window.history.replaceState(null, "", "/auth/confirm");
 
     if (hashError) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot mount effect reading the URL fragment
-      setError(hashError);
+      setError(linkErrorMessage(hashError));
       return;
     }
     if (!code && !accessToken) {

@@ -63,6 +63,12 @@ _MESSAGE_FALLBACKS: tuple[tuple[str, tuple[int, str, str]], ...] = (
 )
 
 
+def _unavailable() -> ApiError:
+    return ApiError(
+        503, "auth_unavailable", "The authentication service is unavailable. Try again."
+    )
+
+
 class SupabaseAuth:
     """Per-request client for Supabase Auth."""
 
@@ -99,18 +105,27 @@ class SupabaseAuth:
             extra={"status_code": response.status_code, "error_code": raw_code or "unknown"},
         )
         if response.status_code >= 500:
-            return ApiError(
-                503, "auth_unavailable", "The authentication service is unavailable. Try again."
-            )
+            return _unavailable()
+        # Pass Supabase's wait hint through so the client can show a countdown.
+        retry_after = response.headers.get("retry-after")
+        headers = {"retry-after": retry_after} if retry_after else None
         if raw_code in _ERROR_MAP:
             status, code, safe_message = _ERROR_MAP[raw_code]
-            return ApiError(status, code, safe_message)
+            return ApiError(status, code, safe_message, headers=headers)
         lowered = message.lower()
         for needle, mapped in _MESSAGE_FALLBACKS:
             if needle in lowered:
                 status, code, safe_message = mapped
-                return ApiError(status, code, safe_message)
+                return ApiError(status, code, safe_message, headers=headers)
         return ApiError(400, "auth_request_rejected", "The authentication request was rejected.")
+
+    async def _send(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
+        """Call Supabase Auth; a timeout or dropped connection becomes a 503, not a 500."""
+        try:
+            return await self._client.request(method, path, **kwargs)
+        except httpx.HTTPError as exc:
+            logger.warning("supabase auth request failed", extra={"error_type": type(exc).__name__})
+            raise _unavailable() from exc
 
     # -- response mapping -------------------------------------------------
 
@@ -150,7 +165,8 @@ class SupabaseAuth:
         Without it Supabase falls back to the project's Site URL, which would
         send staging users to a local address.
         """
-        response = await self._client.post(
+        response = await self._send(
+            "POST",
             "/signup",
             params={"redirect_to": redirect_to},
             json={"email": email, "password": password},
@@ -169,7 +185,8 @@ class SupabaseAuth:
         Supabase answers the same way whether or not the address exists, which is
         what keeps this endpoint from becoming an account-enumeration oracle.
         """
-        response = await self._client.post(
+        response = await self._send(
+            "POST",
             "/resend",
             params={"redirect_to": redirect_to},
             json={"email": email, "type": "signup"},
@@ -178,7 +195,8 @@ class SupabaseAuth:
             raise self._error_from_response(response)
 
     async def sign_in(self, email: str, password: str) -> AuthSession:
-        response = await self._client.post(
+        response = await self._send(
+            "POST",
             "/token",
             params={"grant_type": "password"},
             json={"email": email, "password": password},
@@ -188,7 +206,8 @@ class SupabaseAuth:
         return self._session_from_token_response(response.json())
 
     async def refresh(self, refresh_token: str) -> AuthSession:
-        response = await self._client.post(
+        response = await self._send(
+            "POST",
             "/token",
             params={"grant_type": "refresh_token"},
             json={"refresh_token": refresh_token},
@@ -198,7 +217,8 @@ class SupabaseAuth:
         return self._session_from_token_response(response.json())
 
     async def exchange_pkce(self, code: str, code_verifier: str) -> AuthSession:
-        response = await self._client.post(
+        response = await self._send(
+            "POST",
             "/token",
             params={"grant_type": "pkce"},
             json={"auth_code": code, "code_verifier": code_verifier},
@@ -208,9 +228,13 @@ class SupabaseAuth:
         return self._session_from_token_response(response.json())
 
     async def get_user(self, access_token: str) -> AuthUser:
-        response = await self._client.get(
-            "/user", headers={"authorization": f"Bearer {access_token}"}
+        response = await self._send(
+            "GET", "/user", headers={"authorization": f"Bearer {access_token}"}
         )
+        if response.status_code == 429 or response.status_code >= 500:
+            # Supabase is struggling, not the token: keep the user signed in.
+            logger.warning("user lookup unavailable", extra={"status_code": response.status_code})
+            raise _unavailable()
         if response.status_code != 200:
             logger.warning("access token rejected", extra={"status_code": response.status_code})
             raise ApiError(401, "session_expired", "Session expired. Sign in again.")

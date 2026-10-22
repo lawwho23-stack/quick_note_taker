@@ -301,3 +301,39 @@ def test_invalid_login_body_does_not_echo_password(client: TestClient) -> None:
     assert response.status_code == 400
     assert response.json()["error"]["code"] == "validation_error"
     assert secret not in response.text
+
+
+def test_resend_tells_the_user_to_wait_when_rate_limited(
+    client: TestClient, fake_provider: FakeAuthProvider
+) -> None:
+    fake_provider.fail_resend = ApiError(
+        429, "rate_limited", "Too many attempts.", headers={"retry-after": "30"}
+    )
+
+    response = client.post("/v1/auth/resend", json={"email": "user@example.com"}, headers=ORIGIN)
+
+    assert response.status_code == 429
+    assert response.json()["error"]["code"] == "rate_limited"
+    assert response.headers["retry-after"] == "30"
+
+
+def test_google_callback_rejects_missing_state_cookie(client: TestClient) -> None:
+    response = client.get(
+        "/v1/auth/callback?code=abc&state=anything",
+        headers={"Cookie": "qn_pkce=verifier"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    assert "auth_error=state_missing" in response.headers["location"]
+
+
+def test_exchange_rejects_out_of_range_expiry(client: TestClient) -> None:
+    response = client.post(
+        "/v1/auth/exchange",
+        json={"access_token": "access-x", "expires_in": 10_000_000},
+        headers=ORIGIN,
+    )
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "validation_error"

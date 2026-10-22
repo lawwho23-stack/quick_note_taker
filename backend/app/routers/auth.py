@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.accounts import ensure_account
+from app.accounts import account_out, ensure_account
 from app.auth_types import AuthSession
 from app.config import Settings, get_settings
 from app.cookies import (
@@ -26,11 +26,18 @@ from app.cookies import (
     set_session_cookies,
 )
 from app.db import get_session
-from app.deps import get_auth_provider
+from app.deps import client_ip, get_auth_provider
 from app.errors import ApiError, error_body
 from app.models import User
+from app.rate_limit import (
+    LOGIN,
+    REGISTER,
+    RESEND_BURST,
+    RESEND_HOURLY,
+    RateLimiter,
+    get_rate_limiter,
+)
 from app.schemas import (
-    AccountOut,
     AuthResponse,
     ExchangeRequest,
     LoginRequest,
@@ -57,20 +64,17 @@ router = APIRouter(prefix="/v1/auth", tags=["auth"], dependencies=[Depends(requi
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 ProviderDep = Annotated[SupabaseAuth, Depends(get_auth_provider)]
+LimiterDep = Annotated[RateLimiter, Depends(get_rate_limiter)]
 
 
 def _user_out(auth_session: AuthSession) -> UserOut:
     return UserOut(id=auth_session.user.id, email=auth_session.user.email)
 
 
-def _account_out(account: User) -> AccountOut:
-    return AccountOut(id=str(account.id), email=account.email, created_at=account.created_at)
-
-
 def _auth_response(auth_session: AuthSession, account: User) -> AuthResponse:
     return AuthResponse(
         user=_user_out(auth_session),
-        account=_account_out(account),
+        account=account_out(account),
         access_token_expires_at=auth_session.expires_at or jwt_expiry(auth_session.access_token),
     )
 
@@ -90,12 +94,15 @@ def _confirmation_redirect(settings: Settings) -> str:
 @router.post("/register", response_model=RegisterResponse)
 async def register(
     payload: RegisterRequest,
+    request: Request,
     response: Response,
     provider: ProviderDep,
+    limiter: LimiterDep,
     session: SessionDep,
     settings: SettingsDep,
 ) -> RegisterResponse:
     """Create an account. With email confirmation on, no session is issued yet."""
+    await limiter.hit(REGISTER, client_ip(request))
     result = await provider.sign_up(
         payload.email,
         payload.password,
@@ -115,7 +122,7 @@ async def register(
     return RegisterResponse(
         status="signed_in",
         user=_user_out(result.session),
-        account=_account_out(account),
+        account=account_out(account),
         access_token_expires_at=result.session.expires_at
         or jwt_expiry(result.session.access_token),
     )
@@ -125,19 +132,24 @@ async def register(
 async def resend_confirmation(
     payload: ResendRequest,
     provider: ProviderDep,
+    limiter: LimiterDep,
     settings: SettingsDep,
 ) -> Response:
     """Send another confirmation email.
 
-    Always answers 202 so the endpoint cannot be used to discover which addresses
-    have accounts.
+    Answers 202 whether or not the address has an account, so the endpoint cannot
+    be used to discover accounts. Rate limits are the exception: the user must
+    learn to wait instead of being told an email is on its way.
     """
+    email = payload.email.lower()
+    await limiter.hit(RESEND_BURST, email)
+    await limiter.hit(RESEND_HOURLY, email)
     try:
         await provider.resend_confirmation(
             payload.email, redirect_to=_confirmation_redirect(settings)
         )
     except ApiError as exc:
-        if exc.status_code >= 500:
+        if exc.status_code >= 500 or exc.code == "rate_limited":
             raise
         logger.info("resend confirmation suppressed", extra={"error_code": exc.code})
     return Response(status_code=202)
@@ -146,11 +158,14 @@ async def resend_confirmation(
 @router.post("/login", response_model=AuthResponse)
 async def login(
     payload: LoginRequest,
+    request: Request,
     response: Response,
     provider: ProviderDep,
+    limiter: LimiterDep,
     session: SessionDep,
     settings: SettingsDep,
 ) -> AuthResponse:
+    await limiter.hit(LOGIN, f"{client_ip(request)}|{payload.email.lower()}")
     auth_session = await provider.sign_in(payload.email, payload.password)
     account = await ensure_account(
         session,
@@ -212,11 +227,10 @@ async def google_callback(
         return failure("missing_code")
 
     expected_state = request.cookies.get(settings.oauth_state_cookie)
-    if expected_state:
-        if not state:
-            return failure("state_missing")
-        if not secrets.compare_digest(state, expected_state):
-            return failure("state_mismatch")
+    if not expected_state or not state:
+        return failure("state_missing")
+    if not secrets.compare_digest(state, expected_state):
+        return failure("state_mismatch")
 
     verifier = request.cookies.get(settings.pkce_cookie)
     if not verifier:
@@ -299,7 +313,10 @@ async def refresh_session(
                     auth_session = await provider.refresh(refresh_token)
                 except ApiError as exc:
                     response = _error_response(exc.status_code, exc.code, exc.message)
-                    clear_session_cookies(response, settings)
+                    # Only a rejected refresh token ends the session. An outage or a
+                    # rate limit keeps the cookies so the next try can still work.
+                    if exc.status_code in (400, 401):
+                        clear_session_cookies(response, settings)
                     return response
                 store_session(cache_key, auth_session)
 

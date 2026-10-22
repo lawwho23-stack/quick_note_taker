@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { ResendButton } from "@/components/resend-button";
 import { apiJson } from "@/lib/api";
 
 export default function SignUpPage() {
@@ -14,18 +15,6 @@ export default function SignUpPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmationSent, setConfirmationSent] = useState(false);
-  const [resendState, setResendState] = useState<"idle" | "sending" | "sent" | "failed">("idle");
-
-  async function onResend() {
-    setResendState("sending");
-    const result = await apiJson("/api/v1/auth/resend", {
-      method: "POST",
-      body: JSON.stringify({ email }),
-    });
-    // The API answers 202 whether or not the address exists, so only a
-    // transport failure counts as a failure here.
-    setResendState(result.ok ? "sent" : "failed");
-  }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -78,22 +67,7 @@ export default function SignUpPage() {
               Confirmation email sent to {email}. Open the link in that email to finish creating
               your account, then sign in here.
             </p>
-            {resendState === "sent" ? (
-              <p className="notice info">Another email is on its way. It can take a minute.</p>
-            ) : null}
-            {resendState === "failed" ? (
-              <p className="notice error">
-                Could not resend right now. Wait a moment and try again.
-              </p>
-            ) : null}
-            <button
-              className="button secondary"
-              type="button"
-              onClick={() => void onResend()}
-              disabled={resendState === "sending"}
-            >
-              {resendState === "sending" ? "Sending…" : "Resend confirmation email"}
-            </button>
+            <ResendButton email={email} initialCooldown={60} />
             <p className="muted small">
               Confirmation links expire. If the first email never arrives, check the spam folder
               before resending.
