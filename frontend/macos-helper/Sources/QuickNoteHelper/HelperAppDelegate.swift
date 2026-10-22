@@ -1,28 +1,42 @@
 import AppKit
 import Carbon
+import ChordCore
 import MacShared
 
-/// Menu-bar controller: status, pause/resume, chord mode, permissions, log.
+/// Menu-bar controller: status, pause/resume, chord mode, delivery variant,
+/// retry, permissions, log.
 final class HelperAppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
-    private let chordTap = ChordTap()
+    private let chordTap = ChordTap(mode: HelperSettings.loadMode(), settings: HelperSettings.loadDelivery())
     private var stateTimer: Timer?
+    /// Keeps App Nap from coalescing the delivery timers (20 ms delay, 10 ms gaps).
+    private var latencyActivity: NSObjectProtocol?
 
     private var statusHeaderItem: NSMenuItem!
     private var pauseItem: NSMenuItem!
     private var plainItem: NSMenuItem!
     private var t120Item: NSMenuItem!
     private var t200Item: NSMenuItem!
+    private var variantItems: [DeliveryVariant: NSMenuItem] = [:]
+    private var retryItem: NSMenuItem!
     private var accessibilityItem: NSMenuItem!
     private var listenItem: NSMenuItem!
     private var secureInputItem: NSMenuItem!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        latencyActivity = ProcessInfo.processInfo.beginActivity(
+            options: [.userInitiated, .latencyCritical],
+            reason: "Space+N chord delivery"
+        )
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.title = "◔ QN"
         buildMenu()
 
-        EventLog.shared.log("helper_started")
+        let s = chordTap.settings
+        EventLog.shared.log("helper_started", [
+            "mode": chordTap.mode.rawValue, "variant": s.variant.rawValue, "retry": s.retryEnabled,
+            "schedule_delay_ms": s.scheduleDelayMs, "gap_ms": s.gapMs, "retry_delay_ms": s.retryDelayMs,
+        ])
 
         if !chordTap.start() {
             EventLog.shared.log("tap_not_started_waiting_for_permissions")
@@ -38,8 +52,8 @@ final class HelperAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        // Never leave a buffered space logically pressed on quit.
-        chordTap.drainBuffer()
+        // Never leave a buffered space or a synthetic modifier pressed on quit.
+        chordTap.shutdown()
         EventLog.shared.log("helper_terminating")
     }
 
@@ -66,6 +80,22 @@ final class HelperAppDelegate: NSObject, NSApplicationDelegate {
         let modeItem = NSMenuItem(title: "Chord mode", action: nil, keyEquivalent: "")
         modeItem.submenu = modeMenu
         menu.addItem(modeItem)
+
+        let variantMenu = NSMenu()
+        for variant in DeliveryVariant.allCases {
+            let item = NSMenuItem(title: variant.title, action: #selector(selectVariant(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = variant.rawValue
+            variantMenu.addItem(item)
+            variantItems[variant] = item
+        }
+        let variantItem = NSMenuItem(title: "Delivery variant", action: nil, keyEquivalent: "")
+        variantItem.submenu = variantMenu
+        menu.addItem(variantItem)
+
+        retryItem = NSMenuItem(title: "Retry once after 300 ms", action: #selector(toggleRetry), keyEquivalent: "")
+        retryItem.target = self
+        menu.addItem(retryItem)
 
         menu.addItem(.separator())
 
@@ -114,9 +144,28 @@ final class HelperAppDelegate: NSObject, NSApplicationDelegate {
         refreshState()
     }
 
-    @objc private func setModePlain() { chordTap.mode = .plain; refreshState() }
-    @objc private func setMode120() { chordTap.mode = .threshold120; refreshState() }
-    @objc private func setMode200() { chordTap.mode = .threshold200; refreshState() }
+    @objc private func setModePlain() { setMode(.plain) }
+    @objc private func setMode120() { setMode(.threshold120) }
+    @objc private func setMode200() { setMode(.threshold200) }
+
+    private func setMode(_ mode: ChordTap.Mode) {
+        chordTap.mode = mode
+        HelperSettings.save(mode: mode)
+        refreshState()
+    }
+
+    @objc private func selectVariant(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String, let variant = DeliveryVariant(rawValue: raw) else { return }
+        chordTap.settings.variant = variant
+        HelperSettings.save(delivery: chordTap.settings)
+        refreshState()
+    }
+
+    @objc private func toggleRetry() {
+        chordTap.settings.retryEnabled.toggle()
+        HelperSettings.save(delivery: chordTap.settings)
+        refreshState()
+    }
 
     @objc private func requestPermissions() {
         Permissions.requestListenEvents()
@@ -143,7 +192,7 @@ final class HelperAppDelegate: NSObject, NSApplicationDelegate {
         } else if chordTap.isPaused {
             tapState = "paused"
         } else {
-            tapState = "running — mode: \(chordTap.mode.rawValue)"
+            tapState = "running — mode: \(chordTap.mode.rawValue), variant \(chordTap.settings.variant.rawValue)"
         }
         statusItem.button?.title = (chordTap.isRunning && !chordTap.isPaused) ? "◉ QN" : "◔ QN"
         statusHeaderItem.title = "Quick Note Helper — \(tapState)"
@@ -152,6 +201,11 @@ final class HelperAppDelegate: NSObject, NSApplicationDelegate {
         plainItem.state = chordTap.mode == .plain ? .on : .off
         t120Item.state = chordTap.mode == .threshold120 ? .on : .off
         t200Item.state = chordTap.mode == .threshold200 ? .on : .off
+        for (variant, item) in variantItems {
+            item.state = chordTap.settings.variant == variant ? .on : .off
+        }
+        retryItem.title = "Retry once after \(Int(chordTap.settings.retryDelayMs)) ms"
+        retryItem.state = chordTap.settings.retryEnabled ? .on : .off
 
         accessibilityItem.title = "Accessibility: \(Permissions.canPostEvents ? "granted ✓" : "not granted ✗")"
         listenItem.title = "Input Monitoring: \(Permissions.canListenEvents ? "granted ✓" : "not granted ✗")"
