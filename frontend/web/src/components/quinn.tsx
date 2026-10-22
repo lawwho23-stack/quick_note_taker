@@ -113,6 +113,14 @@ export function QuinnHead({ size = 56 }: { size?: number }) {
       <circle cx="60" cy="60" r="60" fill="#DFF2C8" />
       <g transform="translate(12 8.8) scale(0.8)">
         <QuinnFace />
+        {/* A curled mustache, only on the face icon. */}
+        <path
+          d="M60 83 C55 77 44 77 38 84 C35 87 31 86 30 83 C30 90 40 93 49 89 C54 87 57 86 60 87 C63 86 66 87 71 89 C80 93 90 90 90 83 C89 86 85 87 82 84 C76 77 65 77 60 83 Z"
+          fill="#4A2E1A"
+          stroke="#2C5A1B"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+        />
       </g>
     </svg>
   );
