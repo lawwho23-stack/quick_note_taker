@@ -1,0 +1,203 @@
+/* Capture card, "Frosted light" design.
+   Spec: docs/design/frosted-light/popup-spec.md
+
+   Overlay mode: the page is transparent. The overlay host element paints the
+   frosted card (background, border, shadow, backdrop-filter), so the web
+   page behind it really blurs.
+   Popup mode: a Chrome window is opaque, so the body paints a soft gradient
+   that stands in for the scenery, and the card paints itself. */
+:root {
+  color-scheme: light;
+  --ink: #14161c;
+  --heading: #3f4452;
+  --muted: #4a4f5c;
+  --kbd-ink: #3a3f4c;
+  --accent: #1f5fe0;
+  --danger: #b42318;
+  --hairline: rgba(20, 22, 28, 0.1);
+  --chip-bg: rgba(20, 22, 28, 0.07);
+  --card-bg: rgba(255, 255, 255, 0.74);
+  --card-edge: rgba(255, 255, 255, 0.8);
+  --card-shadow: 0 24px 60px rgba(20, 30, 60, 0.28), 0 2px 6px rgba(20, 30, 60, 0.12);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: transparent;
+}
+
+body {
+  color: var(--ink);
+  font: 14px/1.45 var(--font);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px 14px;
+}
+
+/* Popup window: fill the window and paint the card ourselves. */
+html[data-mode="popup"],
+html[data-mode="popup"] body {
+  height: 100%;
+}
+html[data-mode="popup"] body {
+  display: flex;
+  padding: 8px;
+  background:
+    radial-gradient(130% 120% at 20% 0%, #eef1f6 0%, rgba(238, 241, 246, 0) 55%),
+    linear-gradient(180deg, #e4e8ef 0%, #d6dbe4 100%);
+}
+html[data-mode="popup"] .card {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 12px 18px 12px;
+  border-radius: 18px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-edge);
+  box-shadow: var(--card-shadow);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.pencil {
+  flex: none;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--heading);
+}
+
+textarea {
+  display: block;
+  width: 100%;
+  height: 84px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: var(--ink);
+  font: 400 20px/1.4 var(--font);
+}
+html[data-mode="popup"] textarea {
+  flex: 1;
+  height: auto;
+}
+textarea::placeholder {
+  color: rgba(20, 22, 28, 0.38);
+}
+textarea[readonly] {
+  color: rgba(20, 22, 28, 0.62);
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--hairline);
+  min-height: 43px;
+}
+
+.hints {
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.hint kbd + kbd {
+  margin-left: -2px;
+}
+kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: var(--chip-bg);
+  border: 1px solid var(--hairline);
+  color: var(--kbd-ink);
+  font: 12px/1 var(--font);
+}
+
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.status[data-kind="error"],
+.status[data-kind="not_connected"] {
+  color: var(--danger);
+}
+.status[data-kind="saved"] {
+  color: #127a3c;
+  font-weight: 600;
+}
+.status a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+.status a:hover {
+  text-decoration: underline;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.save {
+  flex: none;
+  height: 32px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #fff;
+  font: 600 14px/1 var(--font);
+  cursor: pointer;
+}
+.save:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.save:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
