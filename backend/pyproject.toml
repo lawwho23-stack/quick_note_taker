@@ -59,4 +59,5 @@ warn_return_any = false
 asyncio_mode = "auto"
 testpaths = ["tests"]
 addopts = "-q"
+markers = ["db: needs a migrated Postgres (set QN_DB_TEST_URL)"]
 pythonpath = ["."]

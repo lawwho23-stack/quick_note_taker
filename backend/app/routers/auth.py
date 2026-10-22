@@ -106,6 +106,7 @@ async def register(
         auth_user_id=result.session.user.id,
         email=result.session.user.email,
     )
+    await session.commit()
     set_session_cookies(response, settings, result.session)
     return RegisterResponse(
         status="signed_in",
@@ -153,6 +154,7 @@ async def login(
         auth_user_id=auth_session.user.id,
         email=auth_session.user.email,
     )
+    await session.commit()
     set_session_cookies(response, settings, auth_session)
     return _auth_response(auth_session, account)
 
@@ -228,6 +230,7 @@ async def google_callback(
         auth_user_id=auth_session.user.id,
         email=auth_session.user.email,
     )
+    await session.commit()
     response = RedirectResponse(f"{settings.web_base_url}{next_path}", status_code=302)
     set_session_cookies(response, settings, auth_session)
     clear_oauth_cookies(response, settings)
@@ -265,6 +268,7 @@ async def exchange_session(
         auth_user_id=auth_session.user.id,
         email=auth_session.user.email,
     )
+    await session.commit()
     set_session_cookies(response, settings, auth_session)
     clear_oauth_cookies(response, settings)
     return _auth_response(auth_session, account)
@@ -306,6 +310,7 @@ async def refresh_session(
         auth_user_id=auth_session.user.id,
         email=auth_session.user.email,
     )
+    await session.commit()
     response = JSONResponse(content=_auth_response(auth_session, account).model_dump(mode="json"))
     set_session_cookies(response, settings, auth_session)
     return response

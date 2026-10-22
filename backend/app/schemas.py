@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -72,3 +73,46 @@ class HealthResponse(BaseModel):
     status: str
     environment: str
     commit: str
+
+
+# Notes ----------------------------------------------------------------------
+
+NOTE_MAX_CHARS = 20_000
+META_MAX_BYTES = 4_096
+
+
+class NoteCreate(BaseModel):
+    """Create a note. The client generates `id`, so a retry can never duplicate it."""
+
+    id: uuid.UUID
+    body: str = Field(min_length=1)
+    source: str = Field(default="web", pattern=r"^[a-z][a-z0-9_-]{0,31}$")
+    meta: dict[str, Any] = Field(default_factory=dict)
+
+
+class NoteUpdate(BaseModel):
+    body: str = Field(min_length=1)
+    base_version: int = Field(ge=1)
+
+
+class NoteOut(BaseModel):
+    id: uuid.UUID
+    body: str
+    version: int
+    source: str
+    meta: dict[str, Any]
+    created_at: datetime
+    updated_at: datetime
+
+
+class NoteCreateAck(BaseModel):
+    """What a create returns. No body, so a token that can only create cannot read notes."""
+
+    id: uuid.UUID
+    version: int
+    created_at: datetime
+
+
+class NoteList(BaseModel):
+    items: list[NoteOut]
+    next_cursor: str | None = None

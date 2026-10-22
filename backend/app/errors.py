@@ -40,12 +40,15 @@ class ApiError(Exception):
         message: str,
         *,
         headers: dict[str, str] | None = None,
+        extra: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(message)
         self.status_code = status_code
         self.code = code
         self.message = message
         self.headers = headers or {}
+        # Extra top-level fields for the error body (for example the current note).
+        self.extra = extra or {}
 
 
 def error_body(code: str, message: str) -> dict[str, Any]:
@@ -56,7 +59,7 @@ def error_body(code: str, message: str) -> dict[str, Any]:
 async def api_error_handler(_: Request, exc: ApiError) -> JSONResponse:
     return JSONResponse(
         status_code=exc.status_code,
-        content=error_body(exc.code, exc.message),
+        content=error_body(exc.code, exc.message) | exc.extra,
         headers=exc.headers,
     )
 
