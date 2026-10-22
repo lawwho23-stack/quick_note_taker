@@ -304,12 +304,6 @@ kbd.small {
   box-shadow: var(--shadow);
 }
 
-.auth-brand {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
 .auth-head {
   display: flex;
   flex-direction: column;
