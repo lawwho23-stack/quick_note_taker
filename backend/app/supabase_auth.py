@@ -29,6 +29,11 @@ _ERROR_MAP: dict[str, tuple[int, str, str]] = {
     ),
     "email_exists": (409, "email_in_use", "An account with this email already exists."),
     "user_already_exists": (409, "email_in_use", "An account with this email already exists."),
+    "email_address_invalid": (
+        400,
+        "email_invalid",
+        "This email address can't receive mail. Use a real email address.",
+    ),
     "weak_password": (400, "weak_password", "The password does not meet the minimum requirements."),
     "validation_failed": (400, "validation_error", "The submitted values are not valid."),
     "signup_disabled": (403, "signup_disabled", "Sign-up is currently disabled."),

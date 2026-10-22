@@ -74,6 +74,32 @@ async def test_sign_in_invalid_credentials(settings: Settings) -> None:
     assert excinfo.value.code == "invalid_credentials"
 
 
+async def test_sign_up_undeliverable_email(settings: Settings) -> None:
+    # Supabase's real reply for an address it judges undeliverable.
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            400,
+            json={
+                "code": 400,
+                "error_code": "email_address_invalid",
+                "msg": 'Email address "tester2@gmail.com" is invalid',
+            },
+        )
+
+    provider = make_provider(settings, handler)
+    try:
+        with pytest.raises(ApiError) as excinfo:
+            await provider.sign_up(
+                "tester2@gmail.com", "pw-12345678", redirect_to="https://app.example/auth/confirm"
+            )
+    finally:
+        await provider.aclose()
+
+    assert excinfo.value.status_code == 400
+    assert excinfo.value.code == "email_invalid"
+    assert "real email address" in excinfo.value.message
+
+
 async def test_sign_in_email_not_confirmed(settings: Settings) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
