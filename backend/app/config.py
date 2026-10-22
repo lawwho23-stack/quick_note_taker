@@ -8,6 +8,13 @@ from typing import Literal
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Stable because of the `key` in frontend/extension/manifest.json.
+DEFAULT_EXTENSION_ORIGIN = "chrome-extension://mpnpdndkgajhjmlefflhemibjmkkcnha"
+
+
+def _split_origins(raw: str) -> list[str]:
+    return [item.strip().rstrip("/") for item in raw.split(",") if item.strip()]
+
 
 class Settings(BaseSettings):
     """Runtime configuration. One instance per process."""
@@ -45,7 +52,20 @@ class Settings(BaseSettings):
     csrf_cookie_max_age: int = 60 * 60 * 24 * 30
     default_next_path: str = "/notes"
 
-    @field_validator("supabase_url", "web_base_url")
+    # Account deletion (Supabase Auth admin API). Empty: DELETE /v1/me answers 503.
+    supabase_service_role_key: str = ""
+
+    # Browser extension origins allowed by CORS (comma separated).
+    extension_origin_allowlist: str = DEFAULT_EXTENSION_ORIGIN
+
+    # Rate limiting (Upstash Redis REST). Both empty: the limiter allows everything.
+    upstash_redis_rest_url: str = ""
+    upstash_redis_rest_token: str = ""
+
+    # Error tracking. Empty: Sentry is not initialised.
+    sentry_dsn: str = ""
+
+    @field_validator("supabase_url", "web_base_url", "upstash_redis_rest_url")
     @classmethod
     def _strip_trailing_slash(cls, value: str) -> str:
         return value.rstrip("/")
@@ -57,11 +77,22 @@ class Settings(BaseSettings):
 
     @property
     def allowed_origins(self) -> list[str]:
-        return [
-            item.strip().rstrip("/")
-            for item in self.web_origin_allowlist.split(",")
-            if item.strip()
-        ]
+        """Website origins: CSRF origin checks and credentialed CORS."""
+        return _split_origins(self.web_origin_allowlist)
+
+    @property
+    def extension_origins(self) -> list[str]:
+        return _split_origins(self.extension_origin_allowlist)
+
+    @property
+    def cors_origins(self) -> list[str]:
+        """Website origins plus extension origins, without duplicates. Never a wildcard."""
+        merged = dict.fromkeys([*self.allowed_origins, *self.extension_origins])
+        return [origin for origin in merged if origin != "*"]
+
+    @property
+    def rate_limit_configured(self) -> bool:
+        return bool(self.upstash_redis_rest_url and self.upstash_redis_rest_token)
 
     @property
     def runtime_database_uri(self) -> str:

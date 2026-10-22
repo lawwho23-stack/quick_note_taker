@@ -1,4 +1,9 @@
-"""Notes for the signed-in account."""
+"""Notes for the signed-in account.
+
+Only `POST /v1/notes` accepts an extension token; it always records
+`source = "extension"` for it and answers with the body-less ack. Every other
+notes route needs a website session.
+"""
 
 from __future__ import annotations
 
@@ -7,7 +12,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response
 
-from app.deps import current_account
+from app.deps import Principal, require_scope, require_session_account
 from app.models import User
 from app.notes import LIST_LIMIT_MAX, NoteStore, get_note_store, note_out
 from app.schemas import NoteCreate, NoteCreateAck, NoteList, NoteOut, NoteUpdate
@@ -15,7 +20,8 @@ from app.security import require_cookie_csrf
 
 router = APIRouter(prefix="/v1/notes", tags=["notes"], dependencies=[Depends(require_cookie_csrf)])
 
-AccountDep = Annotated[User, Depends(current_account)]
+AccountDep = Annotated[User, Depends(require_session_account)]
+CreatorDep = Annotated[Principal, Depends(require_scope("notes:create"))]
 StoreDep = Annotated[NoteStore, Depends(get_note_store)]
 
 
@@ -26,9 +32,12 @@ StoreDep = Annotated[NoteStore, Depends(get_note_store)]
     responses={200: {"model": NoteCreateAck, "description": "Identical retry"}},
 )
 async def create_note(
-    payload: NoteCreate, response: Response, account: AccountDep, store: StoreDep
+    payload: NoteCreate, response: Response, principal: CreatorDep, store: StoreDep
 ) -> NoteCreateAck:
-    note, created = await store.create(account.id, payload)
+    if principal.kind == "extension":
+        # Before hashing in create(), so an identical retry still matches.
+        payload = payload.model_copy(update={"source": "extension"})
+    note, created = await store.create(principal.account.id, payload)
     if not created:
         response.status_code = 200
     return NoteCreateAck(id=note.id, version=note.version, created_at=note.created_at)

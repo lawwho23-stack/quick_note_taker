@@ -116,3 +116,53 @@ class NoteCreateAck(BaseModel):
 class NoteList(BaseModel):
     items: list[NoteOut]
     next_cursor: str | None = None
+
+
+# Extension tokens -----------------------------------------------------------
+
+TOKEN_LABEL_MAX_CHARS = 64
+
+
+class ExtensionTokenCreate(BaseModel):
+    label: str | None = Field(default=None, max_length=TOKEN_LABEL_MAX_CHARS)
+
+
+class ExtensionTokenOut(BaseModel):
+    """A token as listed. Never contains the secret."""
+
+    id: uuid.UUID
+    label: str | None
+    scopes: list[str]
+    created_at: datetime
+    last_used_at: datetime | None = None
+
+
+class ExtensionTokenCreated(BaseModel):
+    """The create response: the only time the secret is ever shown."""
+
+    id: uuid.UUID
+    label: str | None
+    scopes: list[str]
+    created_at: datetime
+    token: str
+
+
+class ExtensionTokenList(BaseModel):
+    items: list[ExtensionTokenOut]
+
+
+class ExtensionStatus(BaseModel):
+    status: Literal["connected"] = "connected"
+
+
+# Export and account deletion --------------------------------------------------
+
+
+class NoteExport(BaseModel):
+    exported_at: datetime
+    count: int
+    notes: list[NoteOut]
+
+
+class DeleteAccountRequest(BaseModel):
+    confirm: Literal["DELETE"]

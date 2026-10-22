@@ -14,6 +14,8 @@ _EXTRA_FIELDS = (
     "status_code",
     "error_code",
     "user_id",
+    "bucket",
+    "reason",
 )
 
 

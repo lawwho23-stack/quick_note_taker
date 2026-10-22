@@ -32,6 +32,8 @@ def build_engine(database_url: str) -> AsyncEngine:
         as_sqlalchemy_url(database_url),
         poolclass=NullPool,
         connect_args={"prepare_threshold": None},
+        # Keep bound values (note bodies) out of error messages, logs and Sentry.
+        hide_parameters=True,
     )
 
 
