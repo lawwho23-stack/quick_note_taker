@@ -159,8 +159,19 @@ def client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
+# Only routes where someone could guess passwords or spam emails are limited.
+# Session checks, refresh, callback and logout run on ordinary page loads; behind
+# the website's proxy many users can share one IP, so limiting them would lock
+# everyone out.
+AUTH_LIMITED_PATHS = frozenset(
+    {"/v1/auth/register", "/v1/auth/resend", "/v1/auth/login", "/v1/auth/exchange"}
+)
+
+
 async def limit_auth_by_ip(
     request: Request, limiter: RateLimiter = Depends(get_rate_limiter)
 ) -> None:
-    """Auth routes: 10 requests per minute per IP. Fails closed when Redis is down."""
+    """Credential routes: 10 requests per minute per IP. Fails closed when Redis is down."""
+    if request.url.path not in AUTH_LIMITED_PATHS:
+        return
     await enforce(limiter, f"auth:{client_ip(request)}", AUTH_LIMIT, fail_open=False)

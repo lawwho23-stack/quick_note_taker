@@ -201,7 +201,7 @@ export function SettingsView() {
                   <strong>{token.label || "Browser extension"}</strong>
                   <span className="muted small">
                     Connected {formatDateTime(token.created_at)} · Last used{" "}
-                    {formatDateTime(token.last_used_at)}
+                    {formatDateTime(token.last_used_at ?? null)}
                   </span>
                 </div>
                 <button

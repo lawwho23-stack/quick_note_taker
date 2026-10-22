@@ -25,6 +25,9 @@ jobs:
       - name: Install workspaces
         run: npm ci
 
+      - name: Generated API types match backend/openapi.json
+        run: npm run check:api --workspace @quick-note/shared
+
       - name: Lint
         run: npm run lint
 

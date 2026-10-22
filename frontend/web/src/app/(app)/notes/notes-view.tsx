@@ -292,7 +292,7 @@ export function NotesView() {
       const draftIds = new Set(drafts.map((note) => note.id));
       return [...drafts, ...items.filter((note) => !draftIds.has(note.id))];
     });
-    setNextCursor(result.data.next_cursor);
+    setNextCursor(result.data.next_cursor ?? null);
     setListState({ phase: "ready" });
     setLoadingMore(false);
   }, []);

@@ -191,6 +191,17 @@ def test_auth_over_the_limit_is_a_429(
     assert getattr(fake_provider, "sign_in_calls", None) == 0
 
 
+def test_page_load_auth_routes_are_not_limited(client: TestClient, limiter: FakeLimiter) -> None:
+    """Session checks run on every page load and many users can share one proxy IP."""
+    limiter.over_limit = True
+    limiter.down = True
+
+    response = client.get("/v1/auth/session", headers={"Origin": ALLOWED_ORIGIN})
+
+    assert response.status_code == 200
+    assert limiter.keys == []
+
+
 def test_auth_fails_closed_when_redis_is_down(client: TestClient, limiter: FakeLimiter) -> None:
     limiter.down = True
 
