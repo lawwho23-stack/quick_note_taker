@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { AuthShell } from "@/components/auth-shell";
+import { GoogleButton } from "@/components/google-button";
 import { PasswordInput } from "@/components/password-input";
 import { ResendButton } from "@/components/resend-button";
 import { apiJson } from "@/lib/api";
@@ -105,6 +106,8 @@ export default function SignUpPage() {
           {error}
         </p>
       ) : null}
+
+      <GoogleButton label="Sign up with Google" />
 
       <form className="form" onSubmit={onSubmit}>
         <div className="field">
