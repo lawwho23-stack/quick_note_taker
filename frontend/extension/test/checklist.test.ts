@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { onBackspace, onShiftEnter, onSpace } from "../src/lib/checklist";
+import { onBackspace, onBoxClick, onShiftEnter, onSpace, toggleAt } from "../src/lib/checklist";
 
 // "|" marks the caret.
 const at = (text: string) => {
@@ -47,5 +47,26 @@ describe("onBackspace", () => {
   it("leaves other backspaces alone", () => {
     expect(onBackspace(at("☐ a|"))).toBeNull();
     expect(onBackspace(at("ab|"))).toBeNull();
+  });
+});
+
+describe("ticking items", () => {
+  it("toggleAt swaps ☐ and ☑ on the caret's line", () => {
+    expect(show(toggleAt("☐ a\n☐ b", 6))).toBe("☐ a\n☑ |b");
+    expect(show(toggleAt("☑ a", 3))).toBe("☐ a|");
+    expect(toggleAt("plain", 2)).toBeNull();
+  });
+
+  it("onBoxClick only fires when the click lands on the box", () => {
+    expect(show(onBoxClick(at("x\n|☐ b")))).toBe("x\n☑ |b");
+    expect(show(onBoxClick(at("☑| b")))).toBe("☐ |b");
+    expect(onBoxClick(at("☐ b|"))).toBeNull();
+    expect(onBoxClick(at("|plain"))).toBeNull();
+  });
+
+  it("done items still continue and end the list", () => {
+    expect(show(onShiftEnter(at("☑ done|")))).toBe("☑ done\n☐ |");
+    expect(show(onShiftEnter(at("☑ |")))).toBe("|");
+    expect(show(onBackspace(at("☑ |")))).toBe("- |");
   });
 });
