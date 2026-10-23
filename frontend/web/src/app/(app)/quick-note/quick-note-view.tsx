@@ -7,9 +7,15 @@ import { useEffect, useRef, useState } from "react";
 import { StatusBadge, useApp } from "@/components/app-shell";
 import { CopyField } from "@/components/copy-field";
 import { apiJson } from "@/lib/api";
-import { connectExtension, EXTENSION_STORE_URL, pingExtension } from "@/lib/extension";
+import {
+  connectExtension,
+  EXTENSION_DOWNLOAD_URL,
+  EXTENSION_STORE_URL,
+  pingExtension,
+} from "@/lib/extension";
 import { useLocalFlag } from "@/lib/local-flag";
 
+const EXTENSIONS_URL = "chrome://extensions";
 const SHORTCUTS_URL = "chrome://extensions/shortcuts";
 const GLOBAL_FLAG_KEY = "quick-note:shortcut-global-confirmed";
 const TEST_SECONDS = 30;
@@ -189,22 +195,36 @@ export function QuickNoteView() {
                 </p>
               ) : (
                 <>
-                  <p className="muted">
-                    The store listing is coming soon. For now, load it by hand (Chrome or Edge):
+                  <p>
+                    <a className="button" href={EXTENSION_DOWNLOAD_URL}>
+                      Download Quick Note
+                    </a>
                   </p>
                   <ol className="plain-steps">
                     <li>
-                      Build it: run <code>npm run build</code> in <code>frontend/extension</code>.
+                      Unzip the file (a Mac often does this for you). Move the{" "}
+                      <strong>quick-note-extension</strong> folder somewhere safe, like Documents. If you
+                      delete it, the extension stops working.
                     </li>
                     <li>
-                      Open <code>chrome://extensions</code> (Edge: <code>edge://extensions</code>) and
-                      turn on <strong>Developer mode</strong>.
-                    </li>
-                    <li>
-                      Click <strong>Load unpacked</strong> and pick the <code>frontend/extension/dist</code>{" "}
-                      folder.
+                      Copy this address into a new tab (it works in Edge too) and turn on{" "}
+                      <strong>Developer mode</strong> at the top right:
                     </li>
                   </ol>
+                  <CopyField value={EXTENSIONS_URL} label="Extensions page address" />
+                  <ol className="plain-steps" start={3}>
+                    <li>
+                      Click <strong>Load unpacked</strong> and pick the <strong>quick-note-extension</strong>{" "}
+                      folder.
+                    </li>
+                    <li>
+                      Come back here and click <strong>Check again</strong>.
+                    </li>
+                  </ol>
+                  <p className="muted small">
+                    The browser may warn you about developer mode extensions. That is normal for apps
+                    installed this way. The store version is coming soon.
+                  </p>
                 </>
               )}
               <p className="muted small">
