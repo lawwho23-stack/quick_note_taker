@@ -99,6 +99,10 @@ async def current_identity(
         token = request.cookies.get(settings.access_cookie)
         source = "cookie"
     if not token:
+        # The access cookie expires with its token, so after an hour it is simply
+        # gone. A refresh cookie means the session can still be renewed.
+        if source == "cookie" and request.cookies.get(settings.refresh_cookie):
+            raise ApiError(401, "session_expired", "Session expired. Refresh to continue.")
         raise ApiError(401, "unauthenticated", "Sign in to continue.")
     user = await provider.get_user(token)
     return Identity(auth_user_id=user.id, email=user.email, access_token=token, source=source)

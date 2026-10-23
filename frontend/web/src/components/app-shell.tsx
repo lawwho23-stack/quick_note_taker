@@ -98,7 +98,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
     const code = result.error?.code;
     if (result.status === 401 && (code === "unauthenticated" || code === "session_expired")) {
-      router.replace("/sign-in");
+      // `reauth` stops the proxy from sending a visitor with stale cookies back here.
+      router.replace("/sign-in?reauth=1");
       return;
     }
     setSession({
@@ -199,7 +200,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <button className="button" type="button" onClick={() => void loadSession()}>
                   Try again
                 </button>
-                <Link className="button ghost" href="/sign-in">
+                <Link className="button ghost" href="/sign-in?reauth=1">
                   Go to sign in
                 </Link>
               </div>
