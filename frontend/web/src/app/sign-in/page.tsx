@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
 import { AuthShell } from "@/components/auth-shell";
+import { GoogleButton } from "@/components/google-button";
 import { PasswordInput } from "@/components/password-input";
 import { ResendButton } from "@/components/resend-button";
 import { apiJson } from "@/lib/api";
@@ -69,7 +70,7 @@ function SignInForm() {
     <>
       <div className="auth-head">
         <h1>Welcome back</h1>
-        <p>Sign in with your email and password.</p>
+        <p>Sign in with Google, or with your email and password.</p>
       </div>
 
       {error ? (
@@ -85,6 +86,8 @@ function SignInForm() {
           <ResendButton email={unconfirmedEmail} />
         </div>
       ) : null}
+
+      <GoogleButton />
 
       <form className="form" onSubmit={onSubmit}>
         <div className="field">

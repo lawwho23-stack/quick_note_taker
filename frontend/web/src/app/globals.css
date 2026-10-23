@@ -333,6 +333,22 @@ kbd.small {
   text-decoration: none;
 }
 
+.auth-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.auth-or::before,
+.auth-or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
 .auth-icon {
   display: inline-flex;
   align-items: center;
