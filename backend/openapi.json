@@ -789,22 +789,6 @@
           },
           {
             "in": "query",
-            "name": "state",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "State"
-            }
-          },
-          {
-            "in": "query",
             "name": "error",
             "required": false,
             "schema": {
@@ -890,7 +874,7 @@
     },
     "/v1/auth/google": {
       "get": {
-        "description": "Start the Google flow with PKCE; the verifier travels in an HttpOnly cookie.",
+        "description": "Start the Google flow with PKCE; the verifier travels in an HttpOnly cookie.\n\nNo separate OAuth `state`: Supabase Auth uses its own state with Google and\nreturns only `?code=`. PKCE binds that code to this browser instead, because\nit can only be exchanged together with the verifier cookie.",
         "operationId": "google_login_v1_auth_google_get",
         "parameters": [
           {

@@ -115,18 +115,15 @@ class FakeAuthProvider:
             raise self.fail_delete
         self.deleted_users.append(auth_user_id)
 
-    def authorize_url(
-        self, *, provider: str, redirect_to: str, code_challenge: str, state: str
-    ) -> str:
+    def authorize_url(self, *, provider: str, redirect_to: str, code_challenge: str) -> str:
         self.authorize_calls.append(
             {
                 "provider": provider,
                 "redirect_to": redirect_to,
                 "code_challenge": code_challenge,
-                "state": state,
             }
         )
-        return f"https://supabase.test/auth/v1/authorize?provider={provider}&state={state}"
+        return f"https://supabase.test/auth/v1/authorize?provider={provider}"
 
     async def exchange_pkce(self, code: str, code_verifier: str) -> AuthSession:
         if self.fail_exchange is not None:

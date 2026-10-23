@@ -7,7 +7,6 @@ The website talks to these endpoints through the Next.js rewrite (`/api/v1/*`
 from __future__ import annotations
 
 import logging
-import secrets
 from typing import Annotated
 from urllib.parse import quote
 
@@ -171,19 +170,22 @@ async def google_login(
     settings: SettingsDep,
     next_path: Annotated[str | None, Query(alias="next")] = None,
 ) -> RedirectResponse:
-    """Start the Google flow with PKCE; the verifier travels in an HttpOnly cookie."""
+    """Start the Google flow with PKCE; the verifier travels in an HttpOnly cookie.
+
+    No separate OAuth `state`: Supabase Auth uses its own state with Google and
+    returns only `?code=`. PKCE binds that code to this browser instead, because
+    it can only be exchanged together with the verifier cookie.
+    """
     verifier, challenge = pkce_pair()
-    state = secrets.token_urlsafe(24)
     destination = sanitize_next_path(next_path, settings.default_next_path)
     redirect_to = f"{settings.web_base_url}/api/v1/auth/callback"
     authorize_url = provider.authorize_url(
         provider="google",
         redirect_to=redirect_to,
         code_challenge=challenge,
-        state=state,
     )
     response = RedirectResponse(authorize_url, status_code=302)
-    set_oauth_cookies(response, settings, verifier=verifier, state=state, next_path=destination)
+    set_oauth_cookies(response, settings, verifier=verifier, next_path=destination)
     return response
 
 
@@ -194,7 +196,6 @@ async def google_callback(
     session: SessionDep,
     settings: SettingsDep,
     code: str | None = None,
-    state: str | None = None,
     error: str | None = None,
 ) -> RedirectResponse:
     """Finish the Google flow: validate, exchange, set cookies, return to the website."""
@@ -214,12 +215,6 @@ async def google_callback(
         return failure(error)
     if not code:
         return failure("missing_code")
-
-    expected_state = request.cookies.get(settings.oauth_state_cookie)
-    if not expected_state or not state:
-        return failure("state_missing")
-    if not secrets.compare_digest(state, expected_state):
-        return failure("state_mismatch")
 
     verifier = request.cookies.get(settings.pkce_cookie)
     if not verifier:

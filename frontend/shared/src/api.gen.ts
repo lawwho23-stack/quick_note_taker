@@ -88,6 +88,10 @@ export interface paths {
         /**
          * Google Login
          * @description Start the Google flow with PKCE; the verifier travels in an HttpOnly cookie.
+         *
+         *     No separate OAuth `state`: Supabase Auth uses its own state with Google and
+         *     returns only `?code=`. PKCE binds that code to this browser instead, because
+         *     it can only be exchanged together with the verifier cookie.
          */
         get: operations["google_login_v1_auth_google_get"];
         put?: never;
@@ -709,7 +713,6 @@ export interface operations {
         parameters: {
             query?: {
                 code?: string | null;
-                state?: string | null;
                 error?: string | null;
             };
             header?: never;

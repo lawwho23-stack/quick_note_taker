@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     access_cookie: str = "qn_at"
     refresh_cookie: str = "qn_rt"
     csrf_cookie: str = "qn_csrf"
-    oauth_state_cookie: str = "qn_oauth_state"
+    oauth_state_cookie: str = "qn_oauth_state"  # legacy: only cleared, never set
     pkce_cookie: str = "qn_pkce"
     next_cookie: str = "qn_next"
     access_cookie_max_age: int = 3600
