@@ -757,6 +757,139 @@ kbd.small {
   font-weight: 600;
 }
 
+/* Hero demo motion (components/hero-demo.tsx). Without `.stage-animated` the
+   stage is the still frame: popup open, full text, no keys, toast or caret. */
+.stage-keys,
+.stage-toast {
+  position: absolute;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 8px);
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+
+.stage-keys {
+  top: 64px;
+}
+
+.stage-toast {
+  top: 72px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 12px 30px rgba(20, 30, 60, 0.25);
+}
+
+.stage-progress {
+  position: absolute;
+  left: 0;
+  bottom: 40px;
+  height: 4px;
+  width: 0;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.popup-caret {
+  display: none;
+  width: 2px;
+  height: 1.15em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: var(--accent);
+  animation: caret-blink 1s steps(1) infinite;
+}
+
+.stage-animated .popup {
+  opacity: 0;
+  transform: translateY(-16px) scale(0.97);
+  transition:
+    opacity 0.3s ease,
+    transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.stage-animated .popup-save {
+  transition:
+    transform 0.12s ease,
+    filter 0.12s ease;
+}
+
+.stage-animated .stage-progress {
+  animation: stage-progress 12s linear infinite;
+}
+
+.stage-animated[data-phase="keys"] .stage-keys {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.stage-animated[data-phase="keys"] .stage-keys kbd {
+  animation: key-press 0.5s ease 0.15s;
+}
+
+.stage-animated[data-phase="open"] .popup,
+.stage-animated[data-phase="typing"] .popup,
+.stage-animated[data-phase="press"] .popup {
+  opacity: 1;
+  transform: none;
+}
+
+.stage-animated[data-phase="open"] .popup-caret,
+.stage-animated[data-phase="typing"] .popup-caret {
+  display: inline-block;
+}
+
+.stage-animated[data-phase="press"] .popup-save {
+  transform: scale(0.92);
+  filter: brightness(0.85);
+}
+
+.stage-animated[data-phase="saved"] .popup {
+  transform: translateY(-24px) scale(0.96);
+}
+
+.stage-animated[data-phase="saved"] .stage-toast {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: 0.15s;
+}
+
+@keyframes caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes key-press {
+  40% {
+    transform: translateY(2px);
+    box-shadow: none;
+    background: #e4e8ef;
+  }
+}
+
+@keyframes stage-progress {
+  to {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-animated * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 .section {
   padding-top: 96px;
 }

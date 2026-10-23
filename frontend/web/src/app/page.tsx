@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { AuthFragmentRedirect } from "@/components/auth-fragment-redirect";
+import { HeroDemo } from "@/components/hero-demo";
 import { Logo, LogoMark } from "@/components/logo";
 import { QuinnRunning } from "@/components/quinn";
 
@@ -18,25 +19,6 @@ function Check() {
       aria-hidden="true"
     >
       <path d="M5 12l5 5L20 7" />
-    </svg>
-  );
-}
-
-function Pencil() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="#2C5A1B"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3z" />
-      <path d="M14 7l3 3" />
     </svg>
   );
 }
@@ -90,32 +72,7 @@ export default function HomePage() {
           </div>
           <span className="fine">Works in Chrome and Edge on Mac and Windows</span>
 
-          <div className="stage" aria-hidden="true">
-            <div className="stage-bar" style={{ left: 32, width: 110 }} />
-            <div className="stage-bar" style={{ left: 156, width: 56, background: "#CDD3DD" }} />
-            <div className="stage-video">
-              <svg width="64" height="64" viewBox="0 0 64 64">
-                <circle cx="32" cy="32" r="30" fill="#FFFFFF" fillOpacity="0.16" />
-                <path d="M26 20l20 12-20 12z" fill="#FFFFFF" fillOpacity="0.85" />
-              </svg>
-            </div>
-            <div className="popup">
-              <div className="popup-title">
-                <Pencil />
-                Quick Note
-              </div>
-              <div className="popup-text">
-                Video idea: 3 mistakes beginners make with Claude Code, and the one-line fix for
-                each
-              </div>
-              <div className="popup-foot">
-                <span className="row" style={{ gap: 6 }}>
-                  <kbd className="small">↵</kbd>Save
-                </span>
-                <span className="popup-save">Save</span>
-              </div>
-            </div>
-          </div>
+          <HeroDemo />
         </section>
 
         <section id="how" className="section">
