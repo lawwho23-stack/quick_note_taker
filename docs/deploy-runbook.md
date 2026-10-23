@@ -7,7 +7,9 @@ Pushing to GitHub does not deploy production. Run these steps by hand, **in this
 cd backend
 supabase db push --db-url "<owner session-pooler URL>"   # never `supabase config push`
 ```
-This applies `0002_notes_tokens.sql` and any later migrations. Deploying the API before this makes the notes routes return 500.
+This applies `0002_notes_tokens.sql` and any later migrations.
+
+Every `app` table has row-level security on, with a policy for `qn_runtime`. If Supabase's security advisor suggests enabling RLS on a table, check that the table has a `qn_runtime` policy first. RLS without a policy blocks the API completely (this broke **Connect** once; see migration 0003). Deploying the API before this makes the notes routes return 500.
 
 ## 2. API environment (Vercel project `quick-note-api`)
 | Variable | Value | Required |
