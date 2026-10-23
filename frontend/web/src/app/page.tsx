@@ -58,10 +58,6 @@ export default function HomePage() {
           </span>
           <span className="pill">One shortcut. One text box.</span>
           <h1>Catch the idea before it slips away.</h1>
-          <p className="lede">
-            Press a shortcut, type your idea, hit Enter. Your note is saved and you are back to your
-            video, your code, or your draft right away.
-          </p>
           <div className="cta-row">
             <Link className="button large" href="/sign-up">
               Create free account
@@ -173,6 +169,7 @@ export default function HomePage() {
           <span className="row" style={{ gap: 10 }}>
             <LogoMark size={40} />
             Quick Note
+            <span className="made-in">Made in Myanmar</span>
           </span>
           <span>Capture ideas without leaving what you are doing.</span>
           <Link href="/privacy">Privacy</Link>

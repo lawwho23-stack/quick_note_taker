@@ -646,11 +646,8 @@ kbd.small {
   letter-spacing: -0.035em;
 }
 
-.hero .lede {
-  max-width: 600px;
-  font-size: 19px;
-  line-height: 1.6;
-  color: var(--body);
+.hero h1 + .cta-row {
+  margin-top: 12px;
 }
 
 .cta-row {
@@ -1079,6 +1076,12 @@ kbd.small {
   border-top: 1px solid rgba(20, 22, 28, 0.1);
   font-size: 14px;
   color: var(--muted);
+}
+
+.made-in {
+  margin-left: 6px;
+  padding-left: 16px;
+  border-left: 1px solid rgba(20, 22, 28, 0.15);
 }
 
 @media (max-width: 600px) {
