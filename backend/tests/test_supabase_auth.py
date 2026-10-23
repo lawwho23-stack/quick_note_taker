@@ -286,7 +286,6 @@ async def test_authorize_url_contains_pkce_parameters(settings: Settings) -> Non
             provider="google",
             redirect_to="https://web.example/api/v1/auth/callback",
             code_challenge="challenge",
-            state="state-value",
         )
     finally:
         await provider.aclose()
@@ -294,7 +293,8 @@ async def test_authorize_url_contains_pkce_parameters(settings: Settings) -> Non
     assert url.startswith("https://project.supabase.co/auth/v1/authorize?")
     assert "provider=google" in url
     assert "code_challenge_method=s256" in url
-    assert "state=state-value" in url
+    # Supabase ignores a state here; the router carries it in redirect_to.
+    assert "state=" not in url
 
 
 @pytest.mark.parametrize(

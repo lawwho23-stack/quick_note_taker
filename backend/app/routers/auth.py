@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 import secrets
 from typing import Annotated
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -175,12 +175,12 @@ async def google_login(
     verifier, challenge = pkce_pair()
     state = secrets.token_urlsafe(24)
     destination = sanitize_next_path(next_path, settings.default_next_path)
-    redirect_to = f"{settings.web_base_url}/api/v1/auth/callback"
+    # Supabase drops a `state` sent to /authorize, so it rides in redirect_to instead.
+    redirect_to = f"{settings.web_base_url}/api/v1/auth/callback?{urlencode({'state': state})}"
     authorize_url = provider.authorize_url(
         provider="google",
         redirect_to=redirect_to,
         code_challenge=challenge,
-        state=state,
     )
     response = RedirectResponse(authorize_url, status_code=302)
     set_oauth_cookies(response, settings, verifier=verifier, state=state, next_path=destination)

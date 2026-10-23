@@ -213,7 +213,10 @@ def test_google_start_sets_flow_cookies_and_sanitizes_next(
     assert cookies["qn_next"] == "/notes"
     call = fake_provider.authorize_calls[-1]
     assert call["provider"] == "google"
-    assert call["redirect_to"] == "http://localhost:3000/api/v1/auth/callback"
+    # The state comes back to the callback inside redirect_to, matching the cookie.
+    assert call["redirect_to"] == (
+        f"http://localhost:3000/api/v1/auth/callback?state={cookies['qn_oauth_state']}"
+    )
 
 
 def test_google_start_keeps_safe_next(client: TestClient) -> None:
@@ -262,6 +265,19 @@ def test_google_callback_success_sets_session_and_redirects(
     assert "qn_at=" in raw
     assert "qn_rt=" in raw
     assert fake_db.upserts == 1
+
+
+def test_google_round_trip_uses_state_from_redirect_to(
+    client: TestClient, fake_provider: FakeAuthProvider
+) -> None:
+    start = client.get("/v1/auth/google?next=/settings", follow_redirects=False)
+    # Supabase returns to redirect_to as given and appends only the code.
+    callback = fake_provider.authorize_calls[-1]["redirect_to"] + "&code=abc"
+    path = callback.removeprefix("http://localhost:3000/api")
+
+    response = client.get(path, headers={"Cookie": _cookie_string(start)}, follow_redirects=False)
+
+    assert response.headers["location"] == "http://localhost:3000/settings"
 
 
 def test_exchange_with_access_token_sets_session(
