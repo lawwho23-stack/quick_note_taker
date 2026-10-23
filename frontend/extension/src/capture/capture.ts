@@ -3,7 +3,17 @@
 // It never calls the API: it asks the background to save.
 import "./capture.css";
 import { NOTE_MAX_CHARS } from "../lib/defaults";
-import { type TextEdit, onBackspace, onShiftEnter, onSpace } from "../lib/checklist";
+import {
+  CHECKBOX,
+  CHECKED,
+  type TextEdit,
+  isDoneLine,
+  onBackspace,
+  onBoxClick,
+  onShiftEnter,
+  onSpace,
+  toggleAt,
+} from "../lib/checklist";
 import { shouldSubmitOnEnter } from "../lib/ime";
 import { POPUP_WIDTH, topCenter } from "../lib/geometry";
 import { type CaptureState, FRAME_MESSAGE_SOURCE, parseFrameMessage } from "../lib/messages";
@@ -14,6 +24,7 @@ const mode = new URLSearchParams(location.search).get("mode") === "popup" ? "pop
 document.documentElement.dataset.mode = mode;
 
 const editor = document.getElementById("editor") as HTMLTextAreaElement;
+const mirror = document.getElementById("mirror") as HTMLElement;
 const card = document.getElementById("card") as HTMLElement;
 const hints = document.getElementById("hints") as HTMLElement;
 const status = document.getElementById("status") as HTMLElement;
@@ -28,8 +39,43 @@ function send<T>(msg: unknown): Promise<T> {
   return chrome.runtime.sendMessage(msg) as Promise<T>;
 }
 
+// Redraw the styled copy of the text that sits behind the transparent
+// textarea. Built from text nodes only, so note text is never parsed as HTML.
+function renderMirror() {
+  const lines = editor.value.split("\n");
+  mirror.replaceChildren(
+    ...lines.flatMap((line, i) => {
+      const nodes: Node[] = [];
+      const marker = line.startsWith(CHECKBOX) || line.startsWith(CHECKED);
+      if (marker) {
+        const row = document.createElement("span");
+        if (isDoneLine(line)) row.className = "done";
+        const box = document.createElement("span");
+        box.className = "box";
+        box.textContent = line.slice(0, 1);
+        row.append(box, line.slice(1));
+        nodes.push(row);
+      } else {
+        nodes.push(document.createTextNode(line));
+      }
+      if (i < lines.length - 1) nodes.push(document.createTextNode("\n"));
+      return nodes;
+    }),
+    // A trailing newline needs a character after it to take up height.
+    document.createTextNode("​"),
+  );
+  mirror.scrollTop = editor.scrollTop;
+}
+
+function applyEdit(edit: TextEdit) {
+  editor.value = edit.value;
+  editor.setSelectionRange(edit.caret, edit.caret);
+  editor.dispatchEvent(new Event("input")); // redraw + keep the draft save in step
+}
+
 function render() {
   editor.readOnly = isLocked(view);
+  mirror.classList.toggle("locked", editor.readOnly);
   const text = statusText(view);
   const showStatus = text !== "";
   status.hidden = !showStatus;
@@ -105,15 +151,30 @@ function applyChecklistKey(e: KeyboardEvent): boolean {
   const s = { value: editor.value, start: editor.selectionStart, end: editor.selectionEnd };
   let edit: TextEdit | null = null;
   if (e.key === " ") edit = onSpace(s);
-  else if (e.key === "Enter" && e.shiftKey) edit = onShiftEnter(s);
+  else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+    // ⌘/Ctrl+Enter ticks the current item; never falls through to save.
+    e.preventDefault();
+    edit = toggleAt(s.value, s.start);
+    if (edit) applyEdit(edit);
+    return true;
+  } else if (e.key === "Enter" && e.shiftKey) edit = onShiftEnter(s);
   else if (e.key === "Backspace") edit = onBackspace(s);
   if (!edit) return false;
   e.preventDefault();
-  editor.value = edit.value;
-  editor.setSelectionRange(edit.caret, edit.caret);
-  editor.dispatchEvent(new Event("input")); // keep the draft save in step
+  applyEdit(edit);
   return true;
 }
+
+// Clicking the ☐ / ☑ box ticks or unticks that item.
+editor.addEventListener("click", () => {
+  if (editor.readOnly) return;
+  const edit = onBoxClick({ value: editor.value, start: editor.selectionStart, end: editor.selectionEnd });
+  if (edit) applyEdit(edit);
+});
+
+editor.addEventListener("scroll", () => {
+  mirror.scrollTop = editor.scrollTop;
+});
 
 editor.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
@@ -130,6 +191,7 @@ editor.addEventListener("keydown", (e) => {
 });
 
 editor.addEventListener("input", () => {
+  renderMirror();
   if (view.kind === "error" && !view.retryable) setView({ kind: "idle", connected: true });
   clearTimeout(draftTimer);
   draftTimer = setTimeout(persistDraftNow, 300);
@@ -196,6 +258,7 @@ async function init() {
   } catch {
     setView({ kind: "idle", connected: true });
   }
+  renderMirror();
   editor.focus();
   editor.setSelectionRange(editor.value.length, editor.value.length);
 }

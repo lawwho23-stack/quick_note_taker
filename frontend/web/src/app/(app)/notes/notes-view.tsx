@@ -13,6 +13,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Dialog } from "@/components/dialog";
 import { Quinn } from "@/components/quinn";
 import { apiFetch, apiJson } from "@/lib/api";
+import { checklistItems, toggleChecklistItem } from "@/lib/checklist";
 import { formatDateTime, formatListDate, notePreview, noteTitle } from "@/lib/format";
 
 const PAGE_SIZE = 30;
@@ -462,6 +463,7 @@ export function NotesView() {
   // ---- Render -------------------------------------------------------------
 
   const saveForSelected = selected && save?.id === selected.id ? save : null;
+  const checklist = checklistItems(draft);
   const overLimit = draft.length > NOTE_MAX_CHARS;
   const hasAnyNotes = notes.length > 0;
 
@@ -649,6 +651,22 @@ export function NotesView() {
               <p className="notice info small">
                 A note needs some text. Type something, or delete the note.
               </p>
+            ) : null}
+            {checklist.length > 0 ? (
+              <ul className="checklist" aria-label="Checklist">
+                {checklist.map((item) => (
+                  <li key={item.line}>
+                    <label className={item.done ? "checklist-item done" : "checklist-item"}>
+                      <input
+                        type="checkbox"
+                        checked={item.done}
+                        onChange={() => onDraftChange(toggleChecklistItem(draft, item.line))}
+                      />
+                      <span>{item.text || " "}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
             ) : null}
             <label className="visually-hidden" htmlFor="note-body">
               Note text
