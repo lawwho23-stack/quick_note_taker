@@ -95,6 +95,14 @@ def test_me_requires_authentication(client: TestClient) -> None:
     assert response.json()["error"]["code"] == "unauthenticated"
 
 
+def test_me_with_only_refresh_cookie_asks_for_refresh(client: TestClient) -> None:
+    # After an hour the browser drops the access cookie but keeps the refresh cookie.
+    response = client.get("/v1/me", headers={"Cookie": "qn_rt=refresh-1"})
+
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "session_expired"
+
+
 def test_me_returns_account_for_signed_in_user(client: TestClient, fake_db: FakeDbSession) -> None:
     fake_db.account = make_account(email="user@example.com")
 
