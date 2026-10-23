@@ -3,6 +3,7 @@
 // It never calls the API: it asks the background to save.
 import "./capture.css";
 import { NOTE_MAX_CHARS } from "../lib/defaults";
+import { type TextEdit, onBackspace, onShiftEnter, onSpace } from "../lib/checklist";
 import { shouldSubmitOnEnter } from "../lib/ime";
 import { POPUP_WIDTH, topCenter } from "../lib/geometry";
 import { type CaptureState, FRAME_MESSAGE_SOURCE, parseFrameMessage } from "../lib/messages";
@@ -97,6 +98,23 @@ async function submit() {
   }
 }
 
+// Checklist shortcuts ("- " → "☐ ", Shift+Enter → next item). Never while an
+// IME is composing, so composed text is not rewritten.
+function applyChecklistKey(e: KeyboardEvent): boolean {
+  if (editor.readOnly || e.isComposing || e.keyCode === 229) return false;
+  const s = { value: editor.value, start: editor.selectionStart, end: editor.selectionEnd };
+  let edit: TextEdit | null = null;
+  if (e.key === " ") edit = onSpace(s);
+  else if (e.key === "Enter" && e.shiftKey) edit = onShiftEnter(s);
+  else if (e.key === "Backspace") edit = onBackspace(s);
+  if (!edit) return false;
+  e.preventDefault();
+  editor.value = edit.value;
+  editor.setSelectionRange(edit.caret, edit.caret);
+  editor.dispatchEvent(new Event("input")); // keep the draft save in step
+  return true;
+}
+
 editor.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     e.preventDefault();
@@ -104,6 +122,7 @@ editor.addEventListener("keydown", (e) => {
     close();
     return;
   }
+  if (applyChecklistKey(e)) return;
   if (shouldSubmitOnEnter(e)) {
     e.preventDefault();
     void submit();
