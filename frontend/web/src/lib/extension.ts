@@ -17,8 +17,13 @@ import {
 
 export const EXTENSION_ID = process.env.NEXT_PUBLIC_EXTENSION_ID || DEFAULT_EXTENSION_ID;
 
-/** Store listing. Until it is published, the setup page shows "Load unpacked" steps. */
+/** Store listing. Until it is published, the setup page offers the zip download below. */
 export const EXTENSION_STORE_URL = process.env.NEXT_PUBLIC_EXTENSION_STORE_URL || null;
+
+/** The extension zip, built by .github/workflows/extension-release.yml. */
+export const EXTENSION_DOWNLOAD_URL =
+  process.env.NEXT_PUBLIC_EXTENSION_DOWNLOAD_URL ||
+  "https://github.com/lawwho23-stack/quick_note_taker/releases/latest/download/quick-note-extension.zip";
 
 export type ExtensionStatus = "checking" | "not-installed" | "installed" | "connected";
 

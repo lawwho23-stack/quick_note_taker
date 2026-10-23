@@ -1,2 +1,5 @@
 # Build output (this is the folder to load unpacked in Chrome)
 dist/
+
+# Zip for the website download button (npm run package)
+release/

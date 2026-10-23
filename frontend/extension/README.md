@@ -30,6 +30,18 @@ Local example: `VITE_API_BASE=http://localhost:8000 VITE_WEB_BASE=http://localho
 
 Other scripts: `typecheck`, `lint`, `test` (same `--workspace` flag).
 
+## Package a zip for users
+
+`npm run package --workspace @quick-note/extension` builds, then writes
+`release/quick-note-extension.zip` (one folder, `quick-note-extension/`). It
+refuses to zip if the manifest lost its `key`, does not allow the production API
+and website (check your `.env` files), or its version does not match
+`package.json` (or `RELEASE_TAG`, e.g. `ext-v0.2.0`).
+
+Users get the zip from the website's setup page, which links to the latest
+GitHub Release. Pushing a tag `ext-v<version>` runs
+`.github/workflows/extension-release.yml`, which publishes it.
+
 ## Load it in Chrome (unpacked)
 
 1. Open `chrome://extensions` and turn on **Developer mode** (top right).

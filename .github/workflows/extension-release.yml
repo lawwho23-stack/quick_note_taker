@@ -1,0 +1,64 @@
+name: Extension release
+
+# Builds the extension zip and attaches it to a GitHub Release. The website's
+# download button links to releases/latest/download/quick-note-extension.zip.
+#
+# To release: bump the version (frontend/extension/package.json and
+# src/lib/manifest.ts), merge, then push a tag:
+#   git tag ext-v0.2.0 && git push origin ext-v0.2.0
+
+on:
+  push:
+    tags: ["ext-v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release, e.g. ext-v0.2.0 (created on the selected branch if missing)"
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: extension-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish the extension zip
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install workspaces
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint --workspace @quick-note/extension
+
+      - name: Typecheck
+        run: npm run typecheck --workspace @quick-note/extension
+
+      - name: Unit tests
+        run: npm run test --workspace @quick-note/extension
+
+      - name: Build and zip (checks the version matches the tag)
+        run: npm run package --workspace @quick-note/extension
+
+      - name: Publish the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$RELEASE_TAG" \
+            frontend/extension/release/quick-note-extension.zip \
+            --target "$GITHUB_SHA" \
+            --title "Quick Note extension ${RELEASE_TAG#ext-}" \
+            --notes "Download quick-note-extension.zip, unzip it, and load the folder in chrome://extensions (Developer mode → Load unpacked). Setup steps: https://quick-note-web-one.vercel.app/quick-note" \
+            --latest

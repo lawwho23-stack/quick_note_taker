@@ -49,5 +49,12 @@ npm ci && npm run build --workspace @quick-note/extension
 2. The ID must be `mpnpdndkgajhjmlefflhemibjmkkcnha`.
 3. Open `chrome://extensions/shortcuts` and set **Quick Note → Open capture** to **Global**.
 
+### Publish the zip for users
+Users don't build anything. The setup page links to the latest GitHub Release
+file `quick-note-extension.zip`. To publish a new one:
+1. Bump the version in `frontend/extension/package.json` and `src/lib/manifest.ts` (both must match).
+2. Merge to `main`, then push a tag: `git tag ext-v0.2.0 && git push origin ext-v0.2.0`.
+3. The **Extension release** workflow tests, builds, zips and attaches it to the release.
+
 ## 7. macOS helper (optional, for Space+N)
 See `frontend/macos-helper/README.md`. Build it, then grant Accessibility and Input Monitoring.
