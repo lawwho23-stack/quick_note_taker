@@ -1438,6 +1438,39 @@ code {
   border-color: var(--accent);
 }
 
+.checklist {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 14px 20px;
+  list-style: none;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.checklist-item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 17px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.checklist-item input {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.checklist-item.done span {
+  color: var(--muted);
+  text-decoration: line-through 2px var(--danger);
+}
+
 .editor-foot {
   display: flex;
   flex-wrap: wrap;
