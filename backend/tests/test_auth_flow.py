@@ -208,7 +208,7 @@ def test_google_start_sets_flow_cookies_and_sanitizes_next(
     assert "supabase.test" in response.headers["location"]
     cookies = _cookie_headers(response)
     assert cookies["qn_pkce"]
-    assert cookies["qn_oauth_state"]
+    assert "qn_oauth_state" not in cookies
     # Hostile next values fall back to the default path.
     assert cookies["qn_next"] == "/notes"
     call = fake_provider.authorize_calls[-1]
@@ -222,36 +222,33 @@ def test_google_start_keeps_safe_next(client: TestClient) -> None:
     assert _cookie_headers(response)["qn_next"] == "/settings"
 
 
-def test_google_callback_rejects_state_mismatch(client: TestClient) -> None:
-    cookies = "qn_pkce=verifier; qn_oauth_state=expected; qn_next=/notes"
-
-    response = client.get(
-        "/v1/auth/callback?code=abc&state=other",
-        headers={"Cookie": cookies},
-        follow_redirects=False,
-    )
-
-    assert response.status_code == 302
-    assert response.headers["location"] == "http://localhost:3000/sign-in?auth_error=state_mismatch"
-
-
 def test_google_callback_requires_verifier(client: TestClient) -> None:
+    response = client.get("/v1/auth/callback?code=abc", follow_redirects=False)
+
+    assert response.status_code == 302
+    assert response.headers["location"] == (
+        "http://localhost:3000/sign-in?auth_error=missing_verifier"
+    )
+
+
+def test_google_callback_requires_code(client: TestClient) -> None:
     response = client.get(
-        "/v1/auth/callback?code=abc&state=match",
-        headers={"Cookie": "qn_oauth_state=match"},
+        "/v1/auth/callback",
+        headers={"Cookie": "qn_pkce=verifier"},
         follow_redirects=False,
     )
 
     assert response.status_code == 302
-    assert "auth_error=missing_verifier" in response.headers["location"]
+    assert "auth_error=missing_code" in response.headers["location"]
 
 
 def test_google_callback_success_sets_session_and_redirects(
     client: TestClient, fake_db: FakeDbSession
 ) -> None:
+    # Supabase returns only `?code=` here, without any state parameter.
     response = client.get(
-        "/v1/auth/callback?code=abc&state=match",
-        headers={"Cookie": "qn_pkce=verifier; qn_oauth_state=match; qn_next=/settings"},
+        "/v1/auth/callback?code=abc",
+        headers={"Cookie": "qn_pkce=verifier; qn_oauth_state=old; qn_next=/settings"},
         follow_redirects=False,
     )
 
@@ -315,17 +312,6 @@ def test_resend_tells_the_user_to_wait_when_rate_limited(
     assert response.status_code == 429
     assert response.json()["error"]["code"] == "rate_limited"
     assert response.headers["retry-after"] == "30"
-
-
-def test_google_callback_rejects_missing_state_cookie(client: TestClient) -> None:
-    response = client.get(
-        "/v1/auth/callback?code=abc&state=anything",
-        headers={"Cookie": "qn_pkce=verifier"},
-        follow_redirects=False,
-    )
-
-    assert response.status_code == 302
-    assert "auth_error=state_missing" in response.headers["location"]
 
 
 def test_exchange_rejects_out_of_range_expiry(client: TestClient) -> None:

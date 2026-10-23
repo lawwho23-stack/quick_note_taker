@@ -283,16 +283,13 @@ class SupabaseAuth:
         # A rejected service key is our configuration problem, not the user's.
         raise account_deletion_unavailable()
 
-    def authorize_url(
-        self, *, provider: str, redirect_to: str, code_challenge: str, state: str
-    ) -> str:
+    def authorize_url(self, *, provider: str, redirect_to: str, code_challenge: str) -> str:
         query = urlencode(
             {
                 "provider": provider,
                 "redirect_to": redirect_to,
                 "code_challenge": code_challenge,
                 "code_challenge_method": "s256",
-                "state": state,
             }
         )
         return f"{self._settings.auth_base_url}/authorize?{query}"

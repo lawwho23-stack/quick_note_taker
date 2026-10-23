@@ -14,7 +14,8 @@ import { apiJson } from "@/lib/api";
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   state_mismatch: "The sign-in attempt did not match this browser session. Please try again.",
   state_missing: "The sign-in attempt lost its security state. Please try again.",
-  missing_verifier: "The sign-in attempt expired. Please try again.",
+  missing_verifier:
+    "The sign-in attempt expired or your browser blocked its cookie. Please try again.",
   missing_code: "Google did not return a sign-in code. Please try again.",
   exchange_failed: "Google sign-in could not be completed. Please try again.",
   access_denied: "Google sign-in was cancelled.",

@@ -81,16 +81,15 @@ def set_oauth_cookies(
     settings: Settings,
     *,
     verifier: str,
-    state: str,
     next_path: str,
 ) -> None:
-    """Persist the PKCE verifier, OAuth state, and post-login destination."""
+    """Persist the PKCE verifier and post-login destination."""
     flow_kwargs = {**_cookie_kwargs(settings), "max_age": settings.oauth_flow_cookie_max_age}
     response.set_cookie(settings.pkce_cookie, verifier, httponly=True, **flow_kwargs)
-    response.set_cookie(settings.oauth_state_cookie, state, httponly=True, **flow_kwargs)
     response.set_cookie(settings.next_cookie, next_path, httponly=True, **flow_kwargs)
 
 
 def clear_oauth_cookies(response: Response, settings: Settings) -> None:
+    # The state cookie is no longer set; clearing it removes copies left by older builds.
     for name in (settings.pkce_cookie, settings.oauth_state_cookie, settings.next_cookie):
         response.delete_cookie(name, **_cookie_kwargs(settings))
